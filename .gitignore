@@ -1,0 +1,24 @@
+# Output Hardhat/Solidity
+/artifacts/
+    # Inclui também build-info/, Crowdfunding.json, Crowdfunding.dbg.json
+/cache/
+/node_modules/
+
+# Arquivos sensíveis e variáveis de ambiente
+.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+*.log
+
+# Configurações específicas do VSCode (opcional)
+.vscode/
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
+
+# Relatórios de cobertura de testes (caso gerados)
+coverage/
+coverage.json

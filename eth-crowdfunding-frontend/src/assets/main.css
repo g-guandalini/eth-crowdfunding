@@ -1,0 +1,7 @@
+/* src/index.css (ou o caminho do seu arquivo CSS principal) */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Você pode adicionar seus estilos personalizados aqui embaixo se precisar */
