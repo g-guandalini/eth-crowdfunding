@@ -25,6 +25,16 @@ contract Crowdfunding {
     // Necessário para iterar sobre os doadores para o reembolso
     mapping(uint256 => address[]) public projectDonors;
 
+    // Endereço da carteira que receberá a taxa de plataforma
+    address public feeWallet;
+    // Constantes para representar a taxa de 0.25%
+    // Para 0.25%, usamos 25/10000. Isso evita problemas com números decimais em Solidity.
+    uint256 private constant FEE_PERCENTAGE_NUMERATOR = 25; // Corresponde a 0.25
+    uint256 private constant FEE_PERCENTAGE_DENOMINATOR = 10000; // Denominador para 0.25%
+
+    // NOVO: Valor mínimo de doação (0.001 Ether em Wei)
+    uint256 private constant MIN_DONATION_AMOUNT = 10**15; // 0.001 Ether
+
     event ProjectCreated(
         uint256 indexed projectId,
         address indexed owner,
@@ -46,7 +56,19 @@ contract Crowdfunding {
         uint256 amountRefunded
     );
 
-    constructor() {}
+    // Evento para registrar o pagamento da taxa
+    event FeePaid(
+        uint256 indexed projectId,
+        address indexed donor,
+        uint256 amount,
+        address indexed feeRecipient
+    );
+
+    // O construtor agora exige o endereço da carteira de taxas
+    constructor(address _feeWallet) {
+        require(_feeWallet != address(0), "Fee wallet cannot be zero address");
+        feeWallet = _feeWallet;
+    }
 
     /**
      * @dev Cria um novo projeto de crowdfunding.
@@ -67,8 +89,9 @@ contract Crowdfunding {
     ) external {
         require(_goal > 0, "Goal must be greater than zero");
         require(_deadlineTimestamp > block.timestamp, "Deadline must be in the future");
+        // NOVO: Se a doação é fixa, o valor fixo também deve ser maior ou igual ao mínimo de doação
         if (_fixedDonationAmount) {
-            require(_requiredDonationAmount > 0, "Fixed donation amount must be greater than zero if fixed donation is enabled");
+            require(_requiredDonationAmount >= MIN_DONATION_AMOUNT, "Fixed donation amount must be greater than or equal to minimum donation amount");
         }
 
         Project memory newProject = Project({
@@ -100,11 +123,28 @@ contract Crowdfunding {
         require(!project.completed, "Project already completed");
         require(!project.refunded, "Project has been refunded"); // Não pode doar se já foi reembolsado
 
+        // NOVO: Requisito de valor mínimo de doação para qualquer tipo de doação
+        require(msg.value >= MIN_DONATION_AMOUNT, "Donation amount must be at least 0.001 Ether");
+
+
         // Verifica o modo de doação (livre ou fixo)
         if (project.fixedDonationAmount) {
             require(msg.value == project.requiredDonationAmount, "Must send exact fixed donation amount");
         } else {
-            require(msg.value > 0, "Donation must be greater than 0");
+            // Em doações livres, o requisito de msg.value > 0 já está implicitamente coberto por MIN_DONATION_AMOUNT
+            // require(msg.value > 0, "Donation must be greater than 0"); // Pode ser removido ou mantido para clareza
+        }
+
+        // Calcula a taxa de 0.25%
+        uint256 feeAmount = (msg.value * FEE_PERCENTAGE_NUMERATOR) / FEE_PERCENTAGE_DENOMINATOR;
+        // Calcula o valor que realmente vai para o projeto após a taxa
+        uint256 amountForProject = msg.value - feeAmount;
+
+        // Transfere a taxa para a carteira de taxas, se a taxa for maior que zero.
+        if (feeAmount > 0) {
+            (bool successFee, ) = payable(feeWallet).call{value: feeAmount}("");
+            require(successFee, "Failed to send fee to fee wallet");
+            emit FeePaid(_projectId, msg.sender, feeAmount, feeWallet);
         }
 
         // Adiciona o doador à lista de doadores do projeto, se ainda não estiver lá
@@ -119,7 +159,9 @@ contract Crowdfunding {
             projectDonors[_projectId].push(msg.sender);
         }
 
-        project.amountRaised += msg.value;
+        // Atualiza o valor arrecadado do projeto com o montante *líquido* (após a taxa)
+        project.amountRaised += amountForProject;
+        // O mapeamento donations ainda armazena o valor *total* que o doador enviou
         donations[_projectId][msg.sender] += msg.value;
 
         emit DonationReceived(_projectId, msg.sender, msg.value);
@@ -143,16 +185,16 @@ contract Crowdfunding {
         // Verifica se o prazo passou, se a meta não foi alcançada e se o reembolso ainda não foi processado
         require(block.timestamp >= project.deadline, "Deadline has not been reached yet");
         require(!project.completed, "Project goal already met");
-        require(project.amountRaised < project.goal, "Project goal not met.");
+        require(project.amountRaised < project.goal, "Project goal not met to be eligible for refund.");
         require(!project.refunded, "Donations for this project have already been refunded");
 
         // Marca o projeto como reembolsado para evitar múltiplas chamadas
         project.refunded = true;
 
-        // Itera sobre todos os doadores e tenta reembolsar 99% do valor
+        // Itera sobre todos os doadores e tenta reembolsar 99% do valor *original*
         for (uint256 i = 0; i < projectDonors[_projectId].length; i++) {
             address donor = projectDonors[_projectId][i];
-            uint256 donorTotalDonation = donations[_projectId][donor];
+            uint256 donorTotalDonation = donations[_projectId][donor]; // O valor original doado
 
             if (donorTotalDonation > 0) {
                 uint256 refundAmount = donorTotalDonation * 99 / 100;
@@ -163,19 +205,10 @@ contract Crowdfunding {
                     (bool success, ) = payable(donor).call{value: refundAmount}("");
                     if (success) {
                         emit RefundProcessed(_projectId, donor, refundAmount);
-                        // Limpa o registro da doação para este doador após o sucesso
-                        // Para evitar reembolsos duplicados se a função for chamada novamente
-                        // antes de project.refunded ser true (no caso de falha de reembolso para alguns)
-                        // ou para preparar para futuras doações no mesmo projeto, se a lógica permitir.
-                        // donations[_projectId][donor] = 0; // Removido para manter o histórico de doações no mapeamento principal
                     }
-                    // Se a transferência falhar, o valor não é limpo e permanece no contrato.
-                    // Isso permite uma tentativa de reembolso posterior ou um mecanismo de reivindicação.
                 }
             }
         }
-        // O 1% restante (ou valores não reembolsados devido a falhas na transferência)
-        // permanece no contrato.
     }
 
     /**
@@ -209,7 +242,7 @@ contract Crowdfunding {
      * @return addresses_ Array de endereços dos doadores.
      * @return amounts_ Array de valores totais doados por cada doador (em Wei), correspondendo ao índice em addresses_.
      */
-    function getProjectDonorsWithAmounts(uint256 _projectId) external view returns (address[] memory addresses_, uint256[] memory amounts_) {
+     function getProjectDonorsWithAmounts(uint256 _projectId) external view returns (address[] memory addresses_, uint256[] memory amounts_) {
         require(_projectId < projects.length, "Invalid project ID");
         address[] storage projectSpecificDonors = projectDonors[_projectId];
         
@@ -218,7 +251,7 @@ contract Crowdfunding {
 
         for (uint256 i = 0; i < projectSpecificDonors.length; i++) {
             address donorAddress = projectSpecificDonors[i];
-            addresses_[i] = donorAddress;
+            addresses_[i] = donorAddress; // <-- CORREÇÃO: Deve ser o endereço do doador aqui
             amounts_[i] = donations[_projectId][donorAddress];
         }
         return (addresses_, amounts_);

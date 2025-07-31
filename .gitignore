@@ -6,6 +6,7 @@
 
 # Arquivos sensíveis e variáveis de ambiente
 .env
+.env.local
 
 # Logs
 npm-debug.log*

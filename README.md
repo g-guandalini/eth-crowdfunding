@@ -51,10 +51,12 @@ npx hardhat node
 
 Isso cria uma blockchain local simulada em `http://localhost:8545`.
 
-3. Em outro terminal, faça o deploy do contrato na rede local:
+3. Crie os arquivos .env e .env.local conforme o arquivo .env.example. Preecha as variáveis de acordo com o ambiente que esteja rodando o projeto.
+
+4. Em outro terminal, faça o deploy do contrato na rede local:
 
 ```bash
-npx hardhat run scripts/deploy.ts --network localhost
+ENVIRONMENT=DEV npx hardhat run scripts/deploy.ts --network localhost
 ```
 
 Você verá o endereço do contrato implantado, copie esse endereço.
@@ -87,7 +89,7 @@ npm run dev
 
 4. Abra o endereço local exibido (exemplo `http://localhost:5173`) no navegador.
 
-5. Clique em **Connect Wallet** para conectar sua carteira (MetaMask apontando para rede local Hardhat). [Necessário incluir a rede Hardhat e utilizar um dos endereços gerados no Item 2]
+5. Clique em **Connect Wallet** para conectar sua carteira (MetaMask apontando para rede local Hardhat). [Necessário incluir a rede Hardhat e utilizar um dos endereços gerados no Item 2 da primeira etapa]
 
 6. Crie projetos e faça doações para os projetos.
 
