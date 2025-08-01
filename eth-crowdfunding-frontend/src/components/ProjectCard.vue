@@ -15,14 +15,14 @@
         </p>
   
         <div class="text-gray-700 text-base mb-2">
-          <p class="mb-1"><strong>Meta:</strong> {{ parseFloat(project.goal).toFixed(2) }} ETH</p>
-          <p class="mb-1"><strong>Arrecadado:</strong> {{ parseFloat(project.amountRaised).toFixed(2) }} ETH</p>
+          <p class="mb-1"><strong>Meta:</strong> {{ parseFloat(project.goal).toFixed(2) }} MON</p>
+          <p class="mb-1"><strong>Arrecadado:</strong> {{ parseFloat(project.amountRaised).toFixed(2) }} MON</p>
           <p class="mb-1">
             <strong>Prazo:</strong>
             {{ formatDeadline(project.deadline) }}
           </p>
           <p v-if="project.fixedDonationAmount" class="mb-1 text-sm text-gray-500">
-              (Doação Fixa: {{ parseFloat(project.requiredDonationAmount).toFixed(4) }} ETH)
+              (Doação Fixa: {{ parseFloat(project.requiredDonationAmount).toFixed(4) }} MON)
           </p>
         </div>
   
@@ -54,7 +54,7 @@
             'flex-grow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 text-center font-mono',
             { 'bg-gray-100 cursor-not-allowed': project.fixedDonationAmount } // Estilo para input readonly
           ]"
-          aria-label="Valor para Doação em ETH"
+          aria-label="Valor para Doação em MON"
         />
         <!-- Botão Doar -->
         <button
@@ -90,7 +90,7 @@
         <div v-if="project.donors && project.donors.length > 0" class="max-h-24 overflow-y-auto custom-scrollbar">
           <ul class="list-disc list-inside text-gray-600 text-sm">
             <li v-for="(donor, dIndex) in project.donors" :key="dIndex">
-              <span class="font-medium">{{ formatAddress(donor.address) }}</span>: {{ parseFloat(donor.amount).toFixed(4) }} ETH
+              <span class="font-medium">{{ formatAddress(donor.address) }}</span>: {{ parseFloat(donor.amount).toFixed(4) }} MON
             </li>
           </ul>
         </div>

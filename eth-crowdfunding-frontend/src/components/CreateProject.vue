@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <h2 class="text-3xl font-extrabold text-gray-900 mb-8 text-center">
-      ✨ Criar Novo Projeto
+      ✨ Criar Novo Projeto ✨
     </h2>
 
     <form @submit.prevent="submitProject" class="bg-white rounded-xl shadow-lg p-6 space-y-6 border border-gray-100">
@@ -30,7 +30,7 @@
       </div>
 
       <div>
-        <label for="goal" class="block text-sm font-medium text-gray-700 mb-1">Meta de Arrecadação (ETH)</label>
+        <label for="goal" class="block text-sm font-medium text-gray-700 mb-1">Meta de Arrecadação (MON)</label>
         <input
           type="text"
           id="goal"
@@ -84,7 +84,7 @@
 
       <!-- Campo para Valor Fixo, visível apenas se isFixedDonation for true -->
       <div v-if="projectForm.isFixedDonation">
-        <label for="fixedDonationValue" class="block text-sm font-medium text-gray-700 mb-1">Valor Fixo da Doação (ETH)</label>
+        <label for="fixedDonationValue" class="block text-sm font-medium text-gray-700 mb-1">Valor Fixo da Doação (MON)</label>
         <input
           type="text"
           id="fixedDonationValue"
@@ -107,7 +107,7 @@
       <button
         type="submit"
         :disabled="isCreatingProject"
-        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300 transform"
+        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-[#1f0053] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300 transform"
         :class="{ 'opacity-50 cursor-not-allowed': isCreatingProject }"
       >
         <span v-if="isCreatingProject" class="flex items-center">

@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <h2 class="text-3xl font-extrabold text-gray-900 mb-8 text-center">
-      🚀 Projetos Ativos para Apoiar
+      ✨ IT ALL STARTS WITH A SPARK ✨
     </h2>
 
     <!-- Controles de Filtro e Ordenação -->
@@ -180,7 +180,7 @@ async function handleDonate(projectId: number, amountString: string) {
     if (error.code === 'ACTION_REJECTED' || error.code === 4001) { 
         alert("Doação cancelada pelo usuário.");
     } else if (error.message && error.message.includes("Must send exact fixed donation amount")) {
-        alert(`Para este projeto, você deve doar exatamente ${parseFloat(projects.value.find(p => p.id === projectId)?.requiredDonationAmount || '0').toFixed(4)} ETH.`);
+        alert(`Para este projeto, você deve doar exatamente ${parseFloat(projects.value.find(p => p.id === projectId)?.requiredDonationAmount || '0').toFixed(4)} MON.`);
     } else {
         alert("Ocorreu um erro ao processar sua doação. Por favor, tente novamente.");
     }

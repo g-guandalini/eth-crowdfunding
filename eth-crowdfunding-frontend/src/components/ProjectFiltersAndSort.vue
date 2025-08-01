@@ -4,21 +4,21 @@
       <div class="flex-grow flex flex-wrap gap-2 justify-center sm:justify-start">
         <button
             @click="$emit('update:selectedFilterProp', 'all')"
-            :class="['px-4 py-2 rounded-lg font-medium transition-colors', selectedFilterProp === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300']"
+            :class="['px-4 py-2 rounded-lg font-medium transition-colors', selectedFilterProp === 'all' ? 'bg-[#1f0053] text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300']"
         >
           Todos os Projetos
         </button>
         <button
             @click="$emit('update:selectedFilterProp', 'myProjects')"
             :disabled="!connectedWalletAddress"
-            :class="['px-4 py-2 rounded-lg font-medium transition-colors', selectedFilterProp === 'myProjects' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300', !connectedWalletAddress && 'opacity-50 cursor-not-allowed']"
+            :class="['px-4 py-2 rounded-lg font-medium transition-colors', selectedFilterProp === 'myProjects' ? 'bg-[#1f0053] text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300', !connectedWalletAddress && 'opacity-50 cursor-not-allowed']"
         >
           Meus Projetos
         </button>
         <button
             @click="$emit('update:selectedFilterProp', 'myContributions')"
             :disabled="!connectedWalletAddress"
-            :class="['px-4 py-2 rounded-lg font-medium transition-colors', selectedFilterProp === 'myContributions' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300', !connectedWalletAddress && 'opacity-50 cursor-not-allowed']"
+            :class="['px-4 py-2 rounded-lg font-medium transition-colors', selectedFilterProp === 'myContributions' ? 'bg-[#1f0053] text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300', !connectedWalletAddress && 'opacity-50 cursor-not-allowed']"
         >
           Minhas Colaborações
         </button>
