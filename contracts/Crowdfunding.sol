@@ -8,21 +8,22 @@ contract Crowdfunding {
         string description;
         uint256 goal;
         uint256 deadline; // Agora é um timestamp recebido como parâmetro
-        uint256 amountRaised;
-        bool completed;
+        uint256 amountRaised; // Armazena o valor líquido (após taxas)
+        bool completed; // True se a meta foi batida
         bool fixedDonationAmount; // Novo: true se a doação for de valor fixo
         uint256 requiredDonationAmount; // Novo: o valor fixo da doação
-        bool refunded; // Novo: Para controlar se o reembolso já foi processado
+        // bool refundsEnabled; // REMOVIDO: Não mais necessário, a validação é direta em claimRefund
+        bool withdrawn; // Para controlar se o saque do proprietário já foi processado
     }
 
     // projects.length pode ser usado no lugar de projectCounter
     Project[] public projects;
 
-    // Mapeamento para armazenar o valor total doado por cada doador em cada projeto
+    // Mapeamento para armazenar o valor TOTAL (BRUTO) doado por cada doador em cada projeto
     mapping(uint256 => mapping(address => uint256)) public donations;
 
     // Novo mapeamento para armazenar a lista de doadores para cada projeto
-    // Necessário para iterar sobre os doadores para o reembolso
+    // Ainda útil para iterar sobre os doadores para listagem, mesmo com reembolso individual
     mapping(uint256 => address[]) public projectDonors;
 
     // Endereço da carteira que receberá a taxa de plataforma
@@ -46,14 +47,14 @@ contract Crowdfunding {
     event DonationReceived(
         uint256 indexed projectId,
         address indexed donor,
-        uint256 amount
+        uint256 amount // Este é o valor BRUTO da doação
     );
 
-    // Novo evento para o processamento de reembolso
-    event RefundProcessed(
+    // Evento para o processamento de reembolso individual
+    event RefundClaimed(
         uint256 indexed projectId,
         address indexed donor,
-        uint256 amountRefunded
+        uint256 amountRefunded // Este é o valor LÍQUIDO reembolsado
     );
 
     // Evento para registrar o pagamento da taxa
@@ -62,6 +63,13 @@ contract Crowdfunding {
         address indexed donor,
         uint256 amount,
         address indexed feeRecipient
+    );
+
+    // Evento para o saque dos fundos pelo proprietário do projeto
+    event FundsWithdrawn(
+        uint256 indexed projectId,
+        address indexed owner,
+        uint256 amount
     );
 
     // O construtor agora exige o endereço da carteira de taxas
@@ -89,7 +97,7 @@ contract Crowdfunding {
     ) external {
         require(_goal > 0, "Goal must be greater than zero");
         require(_deadlineTimestamp > block.timestamp, "Deadline must be in the future");
-        // NOVO: Se a doação é fixa, o valor fixo também deve ser maior ou igual ao mínimo de doação
+        // Se a doação é fixa, o valor fixo também deve ser maior ou igual ao mínimo de doação
         if (_fixedDonationAmount) {
             require(_requiredDonationAmount >= MIN_DONATION_AMOUNT, "Fixed donation amount must be greater than or equal to minimum donation amount");
         }
@@ -104,7 +112,7 @@ contract Crowdfunding {
             completed: false,
             fixedDonationAmount: _fixedDonationAmount, // Define o modo de doação
             requiredDonationAmount: _requiredDonationAmount, // Define o valor fixo
-            refunded: false // Inicializa como não reembolsado
+            withdrawn: false // Inicializa como não sacado
         });
 
         projects.push(newProject);
@@ -121,23 +129,19 @@ contract Crowdfunding {
 
         require(block.timestamp < project.deadline, "Deadline has passed");
         require(!project.completed, "Project already completed");
-        require(!project.refunded, "Project has been refunded"); // Não pode doar se já foi reembolsado
+        require(!project.withdrawn, "Project funds have been withdrawn"); // Não pode doar se o saque já foi feito
 
-        // NOVO: Requisito de valor mínimo de doação para qualquer tipo de doação
+        // Requisito de valor mínimo de doação para qualquer tipo de doação
         require(msg.value >= MIN_DONATION_AMOUNT, "Donation amount must be at least 0.001 Ether");
-
 
         // Verifica o modo de doação (livre ou fixo)
         if (project.fixedDonationAmount) {
             require(msg.value == project.requiredDonationAmount, "Must send exact fixed donation amount");
-        } else {
-            // Em doações livres, o requisito de msg.value > 0 já está implicitamente coberto por MIN_DONATION_AMOUNT
-            // require(msg.value > 0, "Donation must be greater than 0"); // Pode ser removido ou mantido para clareza
         }
 
         // Calcula a taxa de 0.25%
         uint256 feeAmount = (msg.value * FEE_PERCENTAGE_NUMERATOR) / FEE_PERCENTAGE_DENOMINATOR;
-        // Calcula o valor que realmente vai para o projeto após a taxa
+        // Calcula o valor que realmente vai para o projeto após a taxa (VALOR LÍQUIDO)
         uint256 amountForProject = msg.value - feeAmount;
 
         // Transfere a taxa para a carteira de taxas, se a taxa for maior que zero.
@@ -161,54 +165,82 @@ contract Crowdfunding {
 
         // Atualiza o valor arrecadado do projeto com o montante *líquido* (após a taxa)
         project.amountRaised += amountForProject;
-        // O mapeamento donations ainda armazena o valor *total* que o doador enviou
+        // O mapeamento donations ainda armazena o valor *total/bruto* que o doador enviou
         donations[_projectId][msg.sender] += msg.value;
 
         emit DonationReceived(_projectId, msg.sender, msg.value);
 
-        // Se a meta for alcançada, transfere os fundos para o proprietário do projeto
+        // Se a meta for alcançada, marca o projeto como completo (o saque é manual via withdrawFunds)
         if (project.amountRaised >= project.goal) {
             project.completed = true;
-            (bool success, ) = payable(project.owner).call{value: project.amountRaised}("");
-            require(success, "Failed to send funds to project owner");
         }
     }
 
     /**
-     * @dev Permite que as doações sejam reembolsadas se o projeto não atingiu a meta no prazo.
+     * @dev Permite que o proprietário do projeto saque os fundos arrecadados
+     *      uma vez que a meta foi atingida.
+     *      Só pode ser chamado pelo proprietário do projeto e apenas uma vez.
      * @param _projectId O ID do projeto.
      */
-    function refundDonations(uint256 _projectId) external {
+    function withdrawFunds(uint256 _projectId) external {
         require(_projectId < projects.length, "Invalid project ID");
         Project storage project = projects[_projectId];
 
-        // Verifica se o prazo passou, se a meta não foi alcançada e se o reembolso ainda não foi processado
-        require(block.timestamp >= project.deadline, "Deadline has not been reached yet");
-        require(!project.completed, "Project goal already met");
-        require(project.amountRaised < project.goal, "Project goal not met to be eligible for refund.");
-        require(!project.refunded, "Donations for this project have already been refunded");
+        require(msg.sender == project.owner, "Only project owner can withdraw funds");
+        require(project.completed, "Project goal has not been met yet"); // Só saca se a meta foi batida
+        require(project.amountRaised > 0, "No funds to withdraw"); // Garante que há algo para sacar
+        require(!project.withdrawn, "Funds have already been withdrawn for this project");
 
-        // Marca o projeto como reembolsado para evitar múltiplas chamadas
-        project.refunded = true;
+        // Marca o projeto como "sacado" para evitar múltiplos saques
+        project.withdrawn = true;
 
-        // Itera sobre todos os doadores e tenta reembolsar 99% do valor *original*
-        for (uint256 i = 0; i < projectDonors[_projectId].length; i++) {
-            address donor = projectDonors[_projectId][i];
-            uint256 donorTotalDonation = donations[_projectId][donor]; // O valor original doado
+        // Transfere o valor arrecadado (líquido) para o proprietário do projeto
+        (bool success, ) = payable(project.owner).call{value: project.amountRaised}("");
+        require(success, "Failed to send funds to project owner");
 
-            if (donorTotalDonation > 0) {
-                uint256 refundAmount = donorTotalDonation * 99 / 100;
+        // Emite o evento de saque
+        emit FundsWithdrawn(_projectId, project.owner, project.amountRaised);
+    }
 
-                // Verifica se o contrato possui fundos suficientes para o reembolso
-                // e tenta enviar o Ether.
-                if (address(this).balance >= refundAmount) {
-                    (bool success, ) = payable(donor).call{value: refundAmount}("");
-                    if (success) {
-                        emit RefundProcessed(_projectId, donor, refundAmount);
-                    }
-                }
-            }
-        }
+    /**
+     * @dev Permite que um doador individual resgate o valor líquido de sua doação
+     *      se o projeto falhou (não atingiu a meta no prazo).
+     * @param _projectId O ID do projeto.
+     */
+    function claimRefund(uint256 _projectId) external {
+        require(_projectId < projects.length, "Invalid project ID");
+        Project storage project = projects[_projectId];
+
+        // Garante que o projeto falhou e é elegível para reembolso
+        require(block.timestamp >= project.deadline, "Deadline has not been reached yet.");
+        require(!project.completed, "Project goal already met, no refund needed."); // Meta não batida
+        require(project.amountRaised < project.goal, "Project goal met, not eligible for refund."); // Dupla verificação da meta
+        require(!project.withdrawn, "Funds were already withdrawn by owner, no refund possible."); // Dono não sacou
+
+        // Verifica se o chamador realmente doou para este projeto e ainda não resgatou
+        uint256 grossDonation = donations[_projectId][msg.sender];
+        require(grossDonation > 0, "No donation found for this address or already refunded.");
+
+        // Calcula o valor líquido a ser reembolsado (doação bruta menos a taxa que foi para a feeWallet)
+        uint256 feeOnGrossDonation = (grossDonation * FEE_PERCENTAGE_NUMERATOR) / FEE_PERCENTAGE_DENOMINATOR;
+        uint256 netRefundAmount = grossDonation - feeOnGrossDonation;
+
+        require(netRefundAmount > 0, "Net refund amount is zero or less."); // Garante que há algo para reembolsar
+        // Garante que o contrato ainda possui fundos suficientes do projeto para este reembolso específico.
+        // project.amountRaised representa o pool de fundos líquidos ainda no contrato.
+        require(project.amountRaised >= netRefundAmount, "Insufficient project funds for this refund.");
+
+        // Marca a doação como reembolsada definindo-a como 0 para prevenir múltiplos saques
+        donations[_projectId][msg.sender] = 0;
+
+        // Deduz o valor reembolsado do total arrecadado do projeto (do pool de fundos)
+        project.amountRaised -= netRefundAmount;
+
+        // Transfere os fundos para o doador
+        (bool success, ) = payable(msg.sender).call{value: netRefundAmount}("");
+        require(success, "Failed to send refund to donor");
+
+        emit RefundClaimed(_projectId, msg.sender, netRefundAmount);
     }
 
     /**
@@ -228,7 +260,8 @@ contract Crowdfunding {
     }
 
     /**
-     * @dev Retorna o valor total doado por um doador específico para um projeto.
+     * @dev Retorna o valor total BRUTO doado por um doador específico para um projeto.
+     *      Retorna 0 se já reembolsado individualmente.
      * @param _projectId O ID do projeto.
      * @param _donor O endereço do doador.
      */
@@ -237,7 +270,8 @@ contract Crowdfunding {
     }
 
     /**
-     * @dev Retorna todos os endereços de doadores e seus respectivos valores doados para um projeto específico.
+     * @dev Retorna todos os endereços de doadores e seus respectivos valores totais (brutos) doados para um projeto específico.
+     *      Note que os valores podem ser 0 se o doador já tiver resgatado seu reembolso.
      * @param _projectId O ID do projeto.
      * @return addresses_ Array de endereços dos doadores.
      * @return amounts_ Array de valores totais doados por cada doador (em Wei), correspondendo ao índice em addresses_.
@@ -251,8 +285,8 @@ contract Crowdfunding {
 
         for (uint256 i = 0; i < projectSpecificDonors.length; i++) {
             address donorAddress = projectSpecificDonors[i];
-            addresses_[i] = donorAddress; // <-- CORREÇÃO: Deve ser o endereço do doador aqui
-            amounts_[i] = donations[_projectId][donorAddress];
+            amounts_[i] = donations[_projectId][donorAddress]; // Retornará 0 se já foi reembolsado individualmente
+            addresses_[i] = donorAddress;
         }
         return (addresses_, amounts_);
     }

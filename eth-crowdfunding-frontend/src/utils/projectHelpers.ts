@@ -27,15 +27,21 @@ export function formatDeadline(timestamp: number): string {
 }
 
 export function isProjectCompleted(project: Project): boolean {
-  return project.completed || parseFloat(project.amountRaised) >= parseFloat(project.goal);
+  return project.completed;
 }
 
 export function hasDeadlinePassed(project: Project): boolean {
-  return Date.now() / 1000 >= project.deadline;
+  // Para fins de UI, usando Date.now(). Em ambientes de produção DApp,
+  // considerar buscar block.timestamp da blockchain para precisão.
+  return Date.now() / 1000 > project.deadline;
 }
 
 export function shouldShowDonateInput(project: Project): boolean {
-  return !isProjectCompleted(project) && !hasDeadlinePassed(project) && !project.refunded;
+  // Só deve mostrar o input de doação se:
+  // 1. O prazo não passou
+  // 2. O projeto não está completo
+  // 3. O proprietário ainda não sacou os fundos (porque se sacou, não há mais como doar para ele)
+  return !hasDeadlinePassed(project) && !project.completed && !project.withdrawn;
 }
 
 export function getProjectBorderClass(project: Project): string {
