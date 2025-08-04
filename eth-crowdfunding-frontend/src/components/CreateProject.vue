@@ -27,6 +27,10 @@
           class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           placeholder="Conte mais sobre o seu projeto, o que ele fará e por que ele precisa de apoio."
         ></textarea>
+        <!-- NOVO: Dica de Markdown - Classes ajustadas para melhor quebra de linha -->
+        <p class="mt-1 text-xs text-gray-500">
+          📝 Você pode usar <a target="_blank" href="https://www.markdownguide.org/basic-syntax/"  class="text-blue-500 hover:underline">Markdown</a> para formatar a descrição (ex: **negrito**, *itálico*, ## títulos, etc.).
+        </p>
       </div>
 
       <div>

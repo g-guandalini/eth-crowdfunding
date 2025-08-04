@@ -19,7 +19,7 @@
       <p class="text-lg">Nenhum projeto encontrado para o filtro/ordenação selecionado.</p>
       <p class="text-sm mt-2">Que tal criar o seu próprio projeto ou ajustar os filtros?</p>
     </div>
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
       <ProjectCard
         v-for="project in filteredAndSortedProjects"
         :key="project.id"
