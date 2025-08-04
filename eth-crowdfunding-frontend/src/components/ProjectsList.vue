@@ -4,10 +4,11 @@
       ✨ IT ALL STARTS WITH A SPARK ✨
     </h2>
 
-    <!-- Controles de Filtro e Ordenação -->
+    <!-- Controles de Filtro, Ordenação e Busca -->
     <ProjectFiltersAndSort
       v-model:selectedFilterProp="selectedFilter"
       v-model:selectedSortProp="selectedSort"
+      v-model:searchQueryProp="searchQuery" 
       :connectedWalletAddress="connectedWalletAddress"
     />
 
@@ -16,10 +17,10 @@
       <div class="mt-4 animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
     </div>
     <div v-else-if="filteredAndSortedProjects.length === 0" class="text-center text-gray-500 py-10">
-      <p class="text-lg">Nenhum projeto encontrado para o filtro/ordenação selecionado.</p>
+      <p class="text-lg">Nenhum projeto encontrado para o filtro/ordenação/busca selecionado.</p>
       <p class="text-sm mt-2">Que tal criar o seu próprio projeto ou ajustar os filtros?</p>
     </div>
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+    <div v-else class="grid xs:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6"> 
       <ProjectCard
         v-for="project in filteredAndSortedProjects"
         :key="project.id"
@@ -31,21 +32,22 @@
 </template>
 
 <script setup lang="ts">
+// ... (o restante do script permanece o mesmo)
 import { ref, onMounted, computed } from "vue";
 import { ethers } from "ethers";
-import { CROWDFUNDING_ABI, CROWDFUNDING_ADDRESS } from "../contracts"; // Certifique-se de que estes paths estão corretos
-import ProjectFiltersAndSort from '@/components/ProjectFiltersAndSort.vue'; // Ajuste o caminho
-import ProjectCard from '@/components/ProjectCard.vue'; // Ajuste o caminho
-import type { Project } from '@/types/project'; // Ajuste o caminho
+import { CROWDFUNDING_ABI, CROWDFUNDING_ADDRESS } from "../contracts";
+import ProjectFiltersAndSort from '@/components/ProjectFiltersAndSort.vue';
+import ProjectCard from '@/components/ProjectCard.vue';
+import type { Project } from '@/types/project';
 
 const projects = ref<Project[]>([]);
 const loading = ref(true);
 
 const selectedFilter = ref<'all' | 'myProjects' | 'myContributions'>('all');
 const selectedSort = ref<'deadline' | 'progress' | 'goalAmount'>('deadline');
+const searchQuery = ref<string>('');
 const connectedWalletAddress = ref<string | null>(null);
 
-// Lógica de progresso do projeto (reimportada aqui se precisar para o sort)
 function projectProgress(project: Project): number {
   const goal = parseFloat(project.goal);
   const amountRaised = parseFloat(project.amountRaised);
@@ -53,7 +55,6 @@ function projectProgress(project: Project): number {
   return Math.min((amountRaised / goal) * 100, 100);
 }
 
-// Propriedade computada para aplicar os filtros
 const filteredProjects = computed(() => {
   if (!projects.value) return [];
 
@@ -70,10 +71,17 @@ const filteredProjects = computed(() => {
       )
     );
   }
+
+  if (searchQuery.value) {
+    const lowerCaseSearchQuery = searchQuery.value.toLowerCase();
+    tempProjects = tempProjects.filter(project =>
+      project.title.toLowerCase().includes(lowerCaseSearchQuery)
+    );
+  }
+
   return tempProjects;
 });
 
-// Propriedade computada para aplicar a ordenação após a filtragem
 const filteredAndSortedProjects = computed(() => {
   let tempProjects = [...filteredProjects.value];
 
@@ -145,6 +153,11 @@ async function loadProjects() {
 }
 
 async function handleDonate(projectId: number, amountString: string) {
+  // Esta função ainda existe no ProjectList.vue, mas como o ProjectCard.vue
+  // não tem mais o input de doação, este método não será mais invocado a partir do card.
+  // Ele permaneceria se houvesse outra forma de doar diretamente da lista,
+  // ou pode ser removido se a doação for exclusiva da ProjectPage.vue.
+  // Por enquanto, mantenho-o caso você o reutilize ou decida mantê-lo.
   try {
     const project = projects.value.find(p => p.id === projectId); 
     if (!project) {

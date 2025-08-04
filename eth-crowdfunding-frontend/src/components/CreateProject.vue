@@ -12,9 +12,17 @@
           id="title"
           v-model="projectForm.title"
           required
+          maxlength="50" 
           class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           placeholder="Ex: Meu Projeto Incrível"
         />
+        <!-- ADICIONADO: Contador de caracteres e mensagem de erro -->
+        <p class="mt-1 text-xs text-right" :class="{'text-red-500': titleExceeded, 'text-gray-500': !titleExceeded}">
+          {{ projectForm.title.length }} / 50 caracteres
+        </p>
+        <p v-if="titleExceeded" class="mt-1 text-red-500 text-xs">
+          O título do projeto excedeu o limite de 50 caracteres.
+        </p>
       </div>
 
       <div>
@@ -27,9 +35,8 @@
           class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           placeholder="Conte mais sobre o seu projeto, o que ele fará e por que ele precisa de apoio."
         ></textarea>
-        <!-- NOVO: Dica de Markdown - Classes ajustadas para melhor quebra de linha -->
         <p class="mt-1 text-xs text-gray-500">
-          📝 Você pode usar <a target="_blank" href="https://www.markdownguide.org/basic-syntax/"  class="text-blue-500 hover:underline">Markdown</a> para formatar a descrição (ex: **negrito**, *itálico*, ## títulos, etc.).
+          📝 Você pode usar <a  href="https://www.markdownguide.org/basic-syntax/"  class="text-blue-500 hover:underline">Markdown</a> para formatar a descrição (ex: **negrito**, *itálico*, ## títulos, etc.).
         </p>
       </div>
 
@@ -101,13 +108,6 @@
         <p v-if="fixedDonationValueError" class="mt-1 text-red-500 text-xs">{{ fixedDonationValueError }}</p>
       </div>
 
-      <div v-if="errorMessage" class="p-3 bg-red-100 border border-red-400 text-red-700 rounded-md" role="alert">
-        {{ errorMessage }}
-      </div>
-      <div v-if="successMessage" class="p-3 bg-green-100 border border-green-400 text-green-700 rounded-md" role="alert">
-        {{ successMessage }}
-      </div>
-
       <button
         type="submit"
         :disabled="isCreatingProject"
@@ -127,7 +127,9 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { ethers } from "ethers";
-import { CROWDFUNDING_ABI, CROWDFUNDING_ADDRESS } from "../contracts"; // Certifique-se de que o caminho está correto
+import { CROWDFUNDING_ABI, CROWDFUNDING_ADDRESS } from "../contracts";
+import { useRouter } from 'vue-router';
+import { useToast } from "vue-toastification";
 
 // Interface para o formulário
 interface ProjectForm {
@@ -146,16 +148,20 @@ const projectForm = ref<ProjectForm>({
   goal: "",
   deadlineDate: "", // Inicializa vazio
   isFixedDonation: false, // Default para valor livre
-  fixedDonationValue: "0.01", // Valor inicial para o campo de doação fixa (se for selecionado)
+  fixedDonationValue: "0.001", // Valor inicial para o campo de doação fixa (se for selecionado), ajustado para o novo mínimo
 });
+
+// Inicialização do router e do toast
+const router = useRouter();
+const toast = useToast();
 
 // Estados de UI
 const isCreatingProject = ref(false);
-const errorMessage = ref("");
-const successMessage = ref("");
 const goalError = ref("");
 const deadlineError = ref("");
 const fixedDonationValueError = ref("");
+
+const titleExceeded = computed(() => projectForm.value.title.length > 50);
 
 // Computed property para definir a data mínima selecionável no input date (hoje)
 const minDeadlineDate = computed(() => {
@@ -200,53 +206,74 @@ function handleNumericInput(form: ProjectForm, field: 'goal' | 'fixedDonationVal
       goalError.value = "";
     }
   } else if (field === 'fixedDonationValue') {
-    if (value === '' || parseFloat(value) <= 0 || isNaN(parseFloat(value))) {
-      fixedDonationValueError.value = "O valor fixo deve ser um número positivo (ex: 0.01, 1).";
+    const parsedValue = parseFloat(value);
+    // Validação para valor fixo ser >= 0.001
+    if (value === '' || isNaN(parsedValue) || parsedValue < 0.001) {
+      fixedDonationValueError.value = "O valor fixo deve ser igual ou superior a 0.001 MON.";
     } else {
       fixedDonationValueError.value = "";
     }
   }
 }
 
+// Função para resetar o formulário
+function resetForm() {
+  projectForm.value = {
+    title: "",
+    description: "",
+    goal: "",
+    deadlineDate: "",
+    isFixedDonation: false,
+    fixedDonationValue: "0.001", // Reseta para o valor padrão
+  };
+  goalError.value = "";
+  deadlineError.value = "";
+  fixedDonationValueError.value = "";
+}
+
 // Função para submeter o formulário e criar o projeto
 async function submitProject() {
-  // Limpa mensagens e erros anteriores
-  errorMessage.value = "";
-  successMessage.value = "";
+  // Limpa erros anteriores
   goalError.value = "";
   deadlineError.value = "";
   fixedDonationValueError.value = "";
 
+  if (titleExceeded.value) {
+    toast.error("O título do projeto excedeu o limite de 50 caracteres.");
+    return;
+  }
   // Validação básica dos campos de texto
   if (!projectForm.value.title.trim()) {
-    errorMessage.value = "O título do projeto é obrigatório.";
+    toast.error("O título do projeto é obrigatório.");
     return;
   }
   if (!projectForm.value.description.trim()) {
-    errorMessage.value = "A descrição do projeto é obrigatória.";
+    toast.error("A descrição do projeto é obrigatória.");
     return;
   }
 
   // Validação da Meta
-  handleNumericInput(projectForm.value, 'goal'); // Re-valida para garantir que o estado de erro esteja correto
+  handleNumericInput(projectForm.value, 'goal');
   if (goalError.value) {
-    errorMessage.value = "Corrija os erros no formulário.";
+    toast.error("Corrija o campo 'Meta de Arrecadação'.");
     return;
   }
+  // Convertendo a meta para número para comparação
+  const goalNumericValue = parseFloat(projectForm.value.goal);
+
 
   // Validação da Data Limite
   if (!projectForm.value.deadlineDate) {
     deadlineError.value = "A data limite é obrigatória.";
-    errorMessage.value = "Corrija os erros no formulário.";
+    toast.error("Corrija o campo 'Data Limite para Arrecadação'.");
     return;
   }
   const selectedDate = new Date(projectForm.value.deadlineDate);
-  // Para comparar apenas a data, sem considerar a hora, zera a hora da data atual
   const now = new Date();
-  now.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0); // Zera a hora para comparar apenas a data
   if (selectedDate < now) {
     deadlineError.value = "A data limite deve ser no futuro.";
-    errorMessage.value = "Corrija os erros no formulário.";
+    toast.error("A data limite deve ser no futuro.");
     return;
   }
   // Converte a data selecionada para Unix timestamp (segundos)
@@ -255,15 +282,25 @@ async function submitProject() {
   // Validação do Valor Fixo (se a opção for "Valor Fixo")
   let requiredDonationAmountWei = ethers.parseEther("0"); // Padrão: 0 se for valor livre
   if (projectForm.value.isFixedDonation) {
-    handleNumericInput(projectForm.value, 'fixedDonationValue'); // Re-valida ao submeter
+    handleNumericInput(projectForm.value, 'fixedDonationValue');
     if (fixedDonationValueError.value) {
-      errorMessage.value = "Corrija os erros no formulário.";
+      toast.error("Corrija o campo 'Valor Fixo da Doação'.");
       return;
     }
+    const fixedDonationNumericValue = parseFloat(projectForm.value.fixedDonationValue);
+
+    // >>> NOVA TRATATIVA: Valor fixo de doação não pode ser maior que a meta <<<
+    if (fixedDonationNumericValue > goalNumericValue) {
+        fixedDonationValueError.value = "O valor fixo da doação não pode ser maior que a meta de arrecadação.";
+        toast.error("O valor fixo da doação não pode ser maior que a meta de arrecadação.");
+        return; // Impede a submissão do formulário
+    }
+
     requiredDonationAmountWei = ethers.parseEther(projectForm.value.fixedDonationValue);
   }
 
   isCreatingProject.value = true; // Ativa o estado de carregamento/processamento
+  let pendingToast: string | number | undefined; // Para o toast de transação pendente
 
   try {
     const provider = new ethers.BrowserProvider(window.ethereum);
@@ -271,6 +308,11 @@ async function submitProject() {
     const contract = new ethers.Contract(CROWDFUNDING_ADDRESS, CROWDFUNDING_ABI, signer);
 
     const goalInWei = ethers.parseEther(projectForm.value.goal);
+
+    // Toast de confirmação do MetaMask
+    pendingToast = toast.info("Enviando transação... Por favor, confirme na carteira.", {
+        timeout: false, closeButton: false, closeOnClick: false, draggable: false
+    });
 
     // Chama a função createProject do contrato com todos os parâmetros
     const tx = await contract.createProject(
@@ -282,23 +324,44 @@ async function submitProject() {
       requiredDonationAmountWei
     );
 
-    successMessage.value = "Transação enviada! Aguardando confirmação...";
+    toast.dismiss(pendingToast); // Fecha o toast de confirmação do MetaMask
+    // Toast de aguardando confirmação da blockchain
+    pendingToast = toast.info("Transação enviada! Aguardando confirmação da blockchain...", {
+        timeout: false, closeButton: false, closeOnClick: false, draggable: false
+    });
+
     await tx.wait(); // Espera a transação ser minerada e confirmada
 
-    successMessage.value = "Projeto criado com sucesso! 🎉";
+    toast.dismiss(pendingToast); // Fecha o toast de pendência
+
+    // >>> ALTERAÇÃO CRÍTICA AQUI: Obter o ID do projeto após a confirmação <<<
+    // O `getProjectsCount()` retorna um BigInt, converta para Number
+    const finalProjectCount = Number(await contract.getProjectsCount());
+    const newProjectId = finalProjectCount - 1; // O ID do novo projeto é o último adicionado
 
     // Limpa o formulário após o sucesso
-    projectForm.value.title = "";
-    projectForm.value.description = "";
-    projectForm.value.goal = "";
-    projectForm.value.deadlineDate = "";
-    projectForm.value.isFixedDonation = false;
-    projectForm.value.fixedDonationValue = "0.01"; // Reseta para o valor padrão
+    resetForm();
+
+    // Redireciona para a página de detalhes do novo projeto, passando a mensagem de toast via history.state
+    router.push({
+      name: 'project-details',
+      params: { id: newProjectId },
+      state: {
+        toastMessage: "Projeto criado com sucesso! 🎉",
+        // Adicionando o ID ao estado para que a ProjectPage possa validar se o toast é para ela
+        newlyCreatedProjectId: newProjectId
+      }
+    });
 
   } catch (error: any) {
     console.error("Erro ao criar projeto:", error);
-    if (error.code === 'ACTION_REJECTED' || error.code === 4001) { // MetaMask user rejected transaction
-      errorMessage.value = "Criação de projeto cancelada pelo usuário.";
+    
+    if (pendingToast) { // Certifica-se de fechar qualquer toast pendente em caso de erro
+        toast.dismiss(pendingToast);
+    }
+
+    if (error.code === 'ACTION_REJECTED' || error.code === 4001) { // Erro do usuário rejeitando a transação
+      toast.error("Criação de projeto cancelada pelo usuário.");
     } else {
       // Tenta extrair uma mensagem de erro mais útil do erro da transação
       let errorMsg = "Ocorreu um erro ao criar o projeto. Por favor, tente novamente.";
@@ -309,7 +372,7 @@ async function submitProject() {
       } else if (error.message) { // Mensagem genérica do erro
           errorMsg = `Erro: ${error.message.substring(0, 100)}...`; // Limita o tamanho para não poluir
       }
-      errorMessage.value = errorMsg;
+      toast.error(errorMsg);
     }
   } finally {
     isCreatingProject.value = false; // Desativa o estado de carregamento
@@ -319,5 +382,4 @@ async function submitProject() {
 
 <style scoped>
 /* Não há estilos específicos aqui, pois o Tailwind CSS já cuida da maioria. */
-/* Se precisar de algo customizado, pode adicionar. */
 </style>

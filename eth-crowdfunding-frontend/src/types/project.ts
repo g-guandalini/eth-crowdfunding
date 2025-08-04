@@ -3,19 +3,17 @@ export interface Donor {
     address: string;
     amount: string; // Valor doado em ETH (string formatada)
   }
-  
   export interface Project {
     id: number;
     title: string;
     description: string;
-    goal: string; // ETH string
-    amountRaised: string; // ETH string
+    goal: string; // Ethers.formatEther
+    amountRaised: string; // Ethers.formatEther
     owner: string;
-    // donationAmount: string; // Isso agora será um estado interno de ProjectCard
-    deadline: number; // Unix timestamp em segundos
+    deadline: number; // Unix timestamp
     fixedDonationAmount: boolean;
-    requiredDonationAmount: string; // ETH string (se fixedDonationAmount for true)
-    completed: boolean; // Flag do contrato
-    refunded: boolean; // Flag do contrato
-    donors?: Donor[]; // Nova propriedade para a lista de doadores
+    requiredDonationAmount: string; // Ethers.formatEther
+    completed: boolean;
+    withdrawn: boolean; // Adicionado: para controlar se o dono já sacou
+    donors: { address: string; amount: string }[];
   }
