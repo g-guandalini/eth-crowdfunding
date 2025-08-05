@@ -14,5 +14,5 @@
       "@/*": ["*"]
     }
   },
-  "include": ["./scripts", "./test", "./typechain-types", "./deploy", "./contracts"]
+  "include": ["./scripts", "./test", "./typechain-types", "./deploy", "./contracts","/*.d.ts"]
 }
