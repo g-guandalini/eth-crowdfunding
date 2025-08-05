@@ -146,7 +146,6 @@ async function loadProjects() {
   } catch (error) {
     console.error("Erro ao carregar projetos:", error);
     projects.value = [];
-    alert("Ocorreu um erro ao carregar os projetos. Verifique a conexão com a blockchain e se o ABI está atualizado.");
   } finally {
     loading.value = false;
   }
