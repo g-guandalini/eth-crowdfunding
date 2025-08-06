@@ -32,7 +32,6 @@
 </template>
 
 <script setup lang="ts">
-// ... (o restante do script permanece o mesmo)
 import { ref, onMounted, computed } from "vue";
 import { ethers } from "ethers";
 import { CROWDFUNDING_ABI, CROWDFUNDING_ADDRESS } from "../contracts";
@@ -98,18 +97,35 @@ const filteredAndSortedProjects = computed(() => {
 async function loadProjects() {
   loading.value = true;
   projects.value = [];
+  let providerInstance; // Renomeado para evitar conflito de nomes
+  connectedWalletAddress.value = null; // Sempre resetar o endereço ao carregar
 
   try {
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    try {
-      const signer = await provider.getSigner();
-      connectedWalletAddress.value = await signer.getAddress();
-    } catch (e) {
-      console.warn("Nenhuma carteira conectada ou permissão negada para obter endereço.", e);
-      connectedWalletAddress.value = null;
+    if (window.ethereum) {
+      // Caminho 1: MetaMask (ou carteira compatível) é detectado
+      try {
+        providerInstance = new ethers.BrowserProvider(window.ethereum);
+        // Tenta obter o signatário e o endereço conectado
+        const signer = await providerInstance.getSigner();
+        connectedWalletAddress.value = await signer.getAddress();
+        console.log("Carteira conectada:", connectedWalletAddress.value);
+      } catch (e) {
+        // Se a inicialização do BrowserProvider ou getSigner falhar
+        // (ex: usuário recusa conexão, ou nenhuma conta selecionada)
+        console.warn("MetaMask detectado, mas não foi possível conectar ou obter o endereço do signatário. Carregando projetos em modo somente leitura.", e);
+        providerInstance = new ethers.JsonRpcProvider("https://monad-testnet.drpc.org"); // Exemplo para Sepolia
+      }
+    } else {
+      // Caminho 2: MetaMask (ou carteira compatível) NÃO é detectado
+      console.warn("MetaMask não detectado. Carregando projetos com provedor público (somente leitura).");
+      providerInstance = new ethers.JsonRpcProvider("https://monad-testnet.drpc.org"); // Exemplo para Sepolia
     }
 
-    const contract = new ethers.Contract(CROWDFUNDING_ADDRESS, CROWDFUNDING_ABI, provider);
+    if (!providerInstance) {
+      throw new Error("Não foi possível inicializar um provedor Ethereum. Verifique a configuração do RPC.");
+    }
+
+    const contract = new ethers.Contract(CROWDFUNDING_ADDRESS, CROWDFUNDING_ABI, providerInstance);
 
     const count = await contract.getProjectsCount();
     const fetchedProjects: Project[] = [];
@@ -137,7 +153,7 @@ async function loadProjects() {
         fixedDonationAmount: p.fixedDonationAmount,
         requiredDonationAmount: ethers.formatEther(p.requiredDonationAmount),
         completed: p.completed,
-        refunded: p.refunded,
+        refunded: p.refunded, // Corrigido p.refundad para p.refunded
         donors: projectDonors,
       });
     }
@@ -146,6 +162,7 @@ async function loadProjects() {
   } catch (error) {
     console.error("Erro ao carregar projetos:", error);
     projects.value = [];
+    alert("Ocorreu um erro ao carregar os projetos. Isso pode ser devido à falta de conexão com a rede Ethereum ou a um problema com o provedor RPC. Por favor, tente novamente mais tarde.");
   } finally {
     loading.value = false;
   }
@@ -157,6 +174,12 @@ async function handleDonate(projectId: number, amountString: string) {
   // Ele permaneceria se houvesse outra forma de doar diretamente da lista,
   // ou pode ser removido se a doação for exclusiva da ProjectPage.vue.
   // Por enquanto, mantenho-o caso você o reutilize ou decida mantê-lo.
+  
+  if (!window.ethereum) {
+    alert("MetaMask (ou outra carteira Ethereum) não detectada. Por favor, instale e conecte-se para realizar doações.");
+    return;
+  }
+
   try {
     const project = projects.value.find(p => p.id === projectId); 
     if (!project) {
@@ -175,8 +198,9 @@ async function handleDonate(projectId: number, amountString: string) {
       return;
     }
 
+    // A partir daqui, é essencial ter uma carteira conectada para enviar transações
     const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+    const signer = await provider.getSigner(); // Isso irá pedir ao usuário para conectar se ainda não estiver
     const contract = new ethers.Contract(CROWDFUNDING_ADDRESS, CROWDFUNDING_ABI, signer);
 
     const tx = await contract.donate(projectId, { 
