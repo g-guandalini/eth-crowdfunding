@@ -108,17 +108,16 @@ async function loadProjects() {
         // Tenta obter o signatário e o endereço conectado
         const signer = await providerInstance.getSigner();
         connectedWalletAddress.value = await signer.getAddress();
-        console.log("Carteira conectada:", connectedWalletAddress.value);
       } catch (e) {
         // Se a inicialização do BrowserProvider ou getSigner falhar
         // (ex: usuário recusa conexão, ou nenhuma conta selecionada)
         console.warn("MetaMask detectado, mas não foi possível conectar ou obter o endereço do signatário. Carregando projetos em modo somente leitura.", e);
-        providerInstance = new ethers.JsonRpcProvider("https://monad-testnet.drpc.org"); // Exemplo para Sepolia
+        providerInstance = new ethers.JsonRpcProvider("https://rpc.ankr.com/monad_testnet"); // Exemplo para Sepolia
       }
     } else {
       // Caminho 2: MetaMask (ou carteira compatível) NÃO é detectado
       console.warn("MetaMask não detectado. Carregando projetos com provedor público (somente leitura).");
-      providerInstance = new ethers.JsonRpcProvider("https://monad-testnet.drpc.org"); // Exemplo para Sepolia
+      providerInstance = new ethers.JsonRpcProvider("https://rpc.ankr.com/monad_testnet"); // Exemplo para Sepolia
     }
 
     if (!providerInstance) {

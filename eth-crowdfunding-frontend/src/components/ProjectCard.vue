@@ -19,8 +19,8 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
         <!-- Coluna Esquerda: Meta, Arrecadado, Progresso -->
         <div>
-          <p class="mb-1 text-gray-700"><strong>Meta:</strong> {{ parseFloat(project.goal).toFixed(2) }} MON</p>
-          <p class="mb-3 text-gray-700"><strong>Arrecadado:</strong> {{ parseFloat(project.amountRaised).toFixed(2) }} MON</p>
+          <p class="mb-1 text-gray-700"><strong>{{ $t('goal') }}</strong> {{ parseFloat(project.goal).toFixed(2) }} MON</p>
+          <p class="mb-3 text-gray-700"><strong>{{ $t('raised') }}</strong> {{ parseFloat(project.amountRaised).toFixed(2) }} MON</p>
           
           <!-- Barra de Progresso -->
           <div class="w-full bg-gray-200 rounded-full h-2.5 mb-1">
@@ -29,18 +29,18 @@
               :style="{ width: projectProgress(project) + '%' }"
             ></div>
           </div>
-          <p class="text-sm text-gray-500">{{ projectProgress(project).toFixed(2) }}% concluído</p>
+          <p class="text-sm text-gray-500">{{ projectProgress(project).toFixed(2) }}% {{ $t('completed') }}</p>
         </div>
 
         <!-- Coluna Direita: Prazo, Criador, Botão "Conhecer Projeto" -->
         <div class="flex flex-col justify-between h-full">
           <div>
             <p class="mb-1 text-gray-700">
-              <strong>Prazo:</strong>
-              {{ formatDeadline(project.deadline) }}
+              <strong>{{ $t('deadline') }}</strong>
+              {{ formatDeadline(project.deadline, locale) }}
             </p>
             <p class="mb-4 text-gray-700 text-sm">
-              <strong class="font-medium">Criador:</strong>
+              <strong class="font-medium">{{ $t('creator') }}&nbsp;</strong>
               <span class="text-blue-600 break-all">
                 {{ formatAddress(project.owner) }}
               </span>
@@ -52,7 +52,7 @@
             :to="{ name: 'project-details', params: { id: project.id } }"
             class="mt-auto bg-[#1f0053] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-center transition-colors duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 whitespace-nowrap"
           >
-            Ver Projeto
+            {{ $t('view_project') }}
           </router-link>
         </div>
       </div>
@@ -69,6 +69,9 @@ import {
   formatDeadline,
   getProjectBorderClass
 } from '@/utils/projectHelpers';
+import { useI18n } from 'vue-i18n'; // IMPORTANTE: Importar useI18n
+
+const { t, locale } = useI18n(); // IMPORTANTE: Inicializar useI18n para que $t funcione no template
 
 const props = defineProps<{
   project: Project;

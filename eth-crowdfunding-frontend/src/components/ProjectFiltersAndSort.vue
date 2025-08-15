@@ -6,21 +6,21 @@
           @click="$emit('update:selectedFilterProp', 'all')"
           :class="['px-4 py-2 rounded-lg font-medium transition-colors', selectedFilterProp === 'all' ? 'bg-[#1f0053] text-white' : 'bg-gray-200 text-gray-800 text-gray-800 hover:bg-gray-300']"
       >
-        Todos os Projetos
+        {{ $t('all_projects') }}
       </button>
       <button
           @click="$emit('update:selectedFilterProp', 'myProjects')"
           :disabled="!connectedWalletAddress"
           :class="['px-4 py-2 rounded-lg font-medium transition-colors', selectedFilterProp === 'myProjects' ? 'bg-[#1f0053] text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300', !connectedWalletAddress && 'opacity-50 cursor-not-allowed']"
       >
-        Meus Projetos
+        {{ $t('my_projects') }}
       </button>
       <button
           @click="$emit('update:selectedFilterProp', 'myContributions')"
           :disabled="!connectedWalletAddress"
           :class="['px-4 py-2 rounded-lg font-medium transition-colors', selectedFilterProp === 'myContributions' ? 'bg-[#1f0053] text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300', !connectedWalletAddress && 'opacity-50 cursor-not-allowed']"
       >
-        Minhas Colaborações
+        {{ $t('my_contributions') }}
       </button>
     </div>
 
@@ -30,7 +30,7 @@
         type="text"
         :value="searchQueryProp"
         @input="$emit('update:searchQueryProp', ($event.target as HTMLInputElement).value)"
-        placeholder="Buscar projetos por título..."
+        :placeholder="$t('search_projects_by_title_placeholder')"
         class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm pr-10"
       />
     </div>
@@ -42,9 +42,9 @@
           @change="$emit('update:selectedSortProp', ($event.target as HTMLSelectElement).value)"
           class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm pr-10"
       >
-        <option value="deadline">Ordernar por: Prazo</option>
-        <option value="progress">Ordernar por: Percentual arrecadado em relação a meta</option>
-        <option value="goalAmount">Ordernar por: Meta</option>
+        <option value="deadline">{{ $t('sort_by_deadline') }}</option>
+        <option value="progress">{{ $t('sort_by_progress') }}</option>
+        <option value="goalAmount">{{ $t('sort_by_goal_amount') }}</option>
       </select>
     </div>
   </div>
@@ -52,13 +52,16 @@
 
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue';
+import { useI18n } from 'vue-i18n'; // IMPORTANTE: Importar useI18n
+
+const { t } = useI18n(); // IMPORTANTE: Inicializar useI18n para que $t funcione no template
 
 defineProps<{
   selectedFilterProp: 'all' | 'myProjects' | 'myContributions';
   selectedSortProp: 'deadline' | 'progress' | 'goalAmount';
   connectedWalletAddress: string | null;
-  searchQueryProp: string; // <-- ESSENCIAL: Certifique-se que esta prop está aqui
+  searchQueryProp: string;
 }>();
 
-defineEmits(['update:selectedFilterProp', 'update:selectedSortProp', 'update:searchQueryProp']); // <-- ESSENCIAL: Certifique-se que este emit está aqui
+defineEmits(['update:selectedFilterProp', 'update:selectedSortProp', 'update:searchQueryProp']);
 </script>

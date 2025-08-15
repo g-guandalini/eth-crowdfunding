@@ -13,17 +13,30 @@ export function formatAddress(address: string): string {
   return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
 }
 
-export function formatDeadline(timestamp: number): string {
-  if (!timestamp) return 'N/A';
-  const date = new Date(timestamp * 1000);
-  return date.toLocaleDateString('pt-BR', {
+export function formatDeadline(timestamp: number, locale: string = 'en'): string {
+  const date = new Date(timestamp * 1000); // Converter segundos para milissegundos
+
+  // Verifique se a data é válida
+  if (isNaN(date.getTime())) {
+    return 'Data inválida'; // Ou uma string vazia, ou uma chave de tradução
+  }
+
+  // Opções para a formatação da data
+  const options: Intl.DateTimeFormatOptions = {
     year: 'numeric',
-    month: 'long',
+    month: 'long', // 'numeric', '2-digit', 'short', 'long'
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    timeZoneName: 'short'
-  });
+    // second: '2-digit', // Se quiser incluir segundos
+    hour12: false, // Formato 24h
+  };
+
+  // Cria um formatador de data internacionalizado
+  const formatter = new Intl.DateTimeFormat(locale, options);
+
+  // Retorna a data formatada
+  return formatter.format(date);
 }
 
 export function isProjectCompleted(project: Project): boolean {

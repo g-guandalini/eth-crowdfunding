@@ -9,6 +9,7 @@ import router from './router';
 import "vue-toastification/dist/index.css";
 // Importar o plugin e a interface de opções
 import Toast, { type PluginOptions } from "vue-toastification";
+import i18n from './i18n';
 
 const app = createApp(App);
 
@@ -30,6 +31,7 @@ const toastOptions: PluginOptions = {
 
 app.use(createPinia());
 app.use(VueNumeric); 
+app.use(i18n);
 app.use(router);
 app.use(Toast, toastOptions); // Registrar o plugin do Toast com as opções
 app.mount('#app');
