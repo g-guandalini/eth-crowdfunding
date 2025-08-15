@@ -1,47 +1,46 @@
 <template>
   <div class="max-w-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <h2 class="text-3xl font-extrabold text-gray-900 mb-8 text-center">
-      ✨ Criar Novo Projeto ✨
+      {{ $t('create_new_project_title') }}
     </h2>
 
     <form @submit.prevent="submitProject" class="bg-white rounded-xl shadow-lg p-6 space-y-6 border border-gray-100">
       <div>
-        <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Título do Projeto</label>
+        <label for="title" class="block text-sm font-medium text-gray-700 mb-1">{{ $t('project_title_label') }}</label>
         <input
           type="text"
           id="title"
           v-model="projectForm.title"
           required
-          maxlength="50" 
+          maxlength="50"
           class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          placeholder="Ex: Meu Projeto Incrível"
+          :placeholder="$t('project_title_placeholder')"
         />
-        <!-- ADICIONADO: Contador de caracteres e mensagem de erro -->
         <p class="mt-1 text-xs text-right" :class="{'text-red-500': titleExceeded, 'text-gray-500': !titleExceeded}">
-          {{ projectForm.title.length }} / 50 caracteres
+          {{ $t('characters_count', { current: projectForm.title.length, max: 50 }) }}
         </p>
         <p v-if="titleExceeded" class="mt-1 text-red-500 text-xs">
-          O título do projeto excedeu o limite de 50 caracteres.
+          {{ $t('title_exceeded_limit', { max: 50 }) }}
         </p>
       </div>
 
       <div>
-        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">{{ $t('description_label') }}</label>
         <textarea
           id="description"
           v-model="projectForm.description"
           rows="4"
           required
           class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          placeholder="Conte mais sobre o seu projeto, o que ele fará e por que ele precisa de apoio."
+          :placeholder="$t('description_placeholder')"
         ></textarea>
         <p class="mt-1 text-xs text-gray-500">
-          📝 Você pode usar <a  href="https://www.markdownguide.org/basic-syntax/"  class="text-blue-500 hover:underline">Markdown</a> para formatar a descrição (ex: **negrito**, *itálico*, ## títulos, etc.).
+          {{ $t('markdown_tip_part1') }}<a href="https://www.markdownguide.org/basic-syntax/" class="text-blue-500 hover:underline">{{ $t('markdown_link_text') }}</a>{{ $t('markdown_tip_part2') }}
         </p>
       </div>
 
       <div>
-        <label for="goal" class="block text-sm font-medium text-gray-700 mb-1">Meta de Arrecadação (MON)</label>
+        <label for="goal" class="block text-sm font-medium text-gray-700 mb-1">{{ $t('goal_label') }}</label>
         <input
           type="text"
           id="goal"
@@ -49,14 +48,14 @@
           @input="handleNumericInput(projectForm, 'goal')"
           required
           class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          placeholder="Ex: 10.5 (apenas números, use ponto para decimais)"
+          :placeholder="$t('goal_placeholder')"
         />
         <p v-if="goalError" class="mt-1 text-red-500 text-xs">{{ goalError }}</p>
       </div>
 
       <!-- Novo campo: Data Limite -->
       <div>
-        <label for="deadlineDate" class="block text-sm font-medium text-gray-700 mb-1">Data Limite para Arrecadação</label>
+        <label for="deadlineDate" class="block text-sm font-medium text-gray-700 mb-1">{{ $t('deadline_label') }}</label>
         <input
           type="date"
           id="deadlineDate"
@@ -70,7 +69,7 @@
 
       <!-- Novo campo: Tipo de Doação -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Doação</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1">{{ $t('donation_type_label') }}</label>
         <div class="mt-1 flex items-center space-x-4">
           <label class="inline-flex items-center">
             <input
@@ -79,7 +78,7 @@
               :value="false"
               class="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
             />
-            <span class="ml-2 text-gray-700">Valor Livre</span>
+            <span class="ml-2 text-gray-700">{{ $t('free_value') }}</span>
           </label>
           <label class="inline-flex items-center">
             <input
@@ -88,14 +87,14 @@
               :value="true"
               class="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
             />
-            <span class="ml-2 text-gray-700">Valor Fixo</span>
+            <span class="ml-2 text-gray-700">{{ $t('fixed_value') }}</span>
           </label>
         </div>
       </div>
 
       <!-- Campo para Valor Fixo, visível apenas se isFixedDonation for true -->
       <div v-if="projectForm.isFixedDonation">
-        <label for="fixedDonationValue" class="block text-sm font-medium text-gray-700 mb-1">Valor Fixo da Doação (MON)</label>
+        <label for="fixedDonationValue" class="block text-sm font-medium text-gray-700 mb-1">{{ $t('fixed_donation_label') }}</label>
         <input
           type="text"
           id="fixedDonationValue"
@@ -103,7 +102,7 @@
           @input="handleNumericInput(projectForm, 'fixedDonationValue')"
           required
           class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          placeholder="Ex: 0.05 (apenas números, use ponto para decimais)"
+          :placeholder="$t('fixed_donation_placeholder')"
         />
         <p v-if="fixedDonationValueError" class="mt-1 text-red-500 text-xs">{{ fixedDonationValueError }}</p>
       </div>
@@ -116,9 +115,9 @@
       >
         <span v-if="isCreatingProject" class="flex items-center">
           <div class="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-3"></div>
-          Criando Projeto...
+          {{ $t('creating_project_button') }}
         </span>
-        <span v-else>Criar Projeto</span>
+        <span v-else>{{ $t('create_project_button') }}</span>
       </button>
     </form>
   </div>
@@ -130,6 +129,9 @@ import { ethers } from "ethers";
 import { CROWDFUNDING_ABI, CROWDFUNDING_ADDRESS } from "../contracts";
 import { useRouter } from 'vue-router';
 import { useToast } from "vue-toastification";
+import { useI18n } from 'vue-i18n'; // IMPORTANTE: Importar useI18n
+
+const { t } = useI18n(); // IMPORTANTE: Inicializar useI18n para usar t() no script
 
 // Interface para o formulário
 interface ProjectForm {
@@ -201,7 +203,7 @@ function handleNumericInput(form: ProjectForm, field: 'goal' | 'fixedDonationVal
   // Validação específica para cada campo
   if (field === 'goal') {
     if (value === '' || parseFloat(value) <= 0 || isNaN(parseFloat(value))) {
-      goalError.value = "A meta deve ser um número positivo (ex: 0.01, 10).";
+      goalError.value = t('goal_numeric_positive_error'); // Traduzido
     } else {
       goalError.value = "";
     }
@@ -209,7 +211,7 @@ function handleNumericInput(form: ProjectForm, field: 'goal' | 'fixedDonationVal
     const parsedValue = parseFloat(value);
     // Validação para valor fixo ser >= 0.001
     if (value === '' || isNaN(parsedValue) || parsedValue < 0.001) {
-      fixedDonationValueError.value = "O valor fixo deve ser igual ou superior a 0.001 MON.";
+      fixedDonationValueError.value = t('fixed_value_min_error'); // Traduzido
     } else {
       fixedDonationValueError.value = "";
     }
@@ -239,23 +241,23 @@ async function submitProject() {
   fixedDonationValueError.value = "";
 
   if (titleExceeded.value) {
-    toast.error("O título do projeto excedeu o limite de 50 caracteres.");
+    toast.error(t('title_exceeded_limit', { max: 50 })); // Traduzido
     return;
   }
   // Validação básica dos campos de texto
   if (!projectForm.value.title.trim()) {
-    toast.error("O título do projeto é obrigatório.");
+    toast.error(t('title_required')); // Traduzido
     return;
   }
   if (!projectForm.value.description.trim()) {
-    toast.error("A descrição do projeto é obrigatória.");
+    toast.error(t('description_required')); // Traduzido
     return;
   }
 
   // Validação da Meta
   handleNumericInput(projectForm.value, 'goal');
   if (goalError.value) {
-    toast.error("Corrija o campo 'Meta de Arrecadação'.");
+    toast.error(t('correct_goal_field')); // Traduzido
     return;
   }
   // Convertendo a meta para número para comparação
@@ -264,16 +266,16 @@ async function submitProject() {
 
   // Validação da Data Limite
   if (!projectForm.value.deadlineDate) {
-    deadlineError.value = "A data limite é obrigatória.";
-    toast.error("Corrija o campo 'Data Limite para Arrecadação'.");
+    deadlineError.value = t('deadline_required'); // Traduzido
+    toast.error(t('correct_deadline_field')); // Traduzido
     return;
   }
   const selectedDate = new Date(projectForm.value.deadlineDate);
   const now = new Date();
   now.setHours(0, 0, 0, 0); // Zera a hora para comparar apenas a data
   if (selectedDate < now) {
-    deadlineError.value = "A data limite deve ser no futuro.";
-    toast.error("A data limite deve ser no futuro.");
+    deadlineError.value = t('deadline_in_future_error'); // Traduzido
+    toast.error(t('deadline_in_future_error')); // Traduzido
     return;
   }
   // Converte a data selecionada para Unix timestamp (segundos)
@@ -284,15 +286,15 @@ async function submitProject() {
   if (projectForm.value.isFixedDonation) {
     handleNumericInput(projectForm.value, 'fixedDonationValue');
     if (fixedDonationValueError.value) {
-      toast.error("Corrija o campo 'Valor Fixo da Doação'.");
+      toast.error(t('correct_fixed_donation_field')); // Traduzido
       return;
     }
     const fixedDonationNumericValue = parseFloat(projectForm.value.fixedDonationValue);
 
     // >>> NOVA TRATATIVA: Valor fixo de doação não pode ser maior que a meta <<<
     if (fixedDonationNumericValue > goalNumericValue) {
-        fixedDonationValueError.value = "O valor fixo da doação não pode ser maior que a meta de arrecadação.";
-        toast.error("O valor fixo da doação não pode ser maior que a meta de arrecadação.");
+        fixedDonationValueError.value = t('fixed_value_greater_than_goal_error'); // Traduzido
+        toast.error(t('fixed_value_greater_than_goal_error')); // Traduzido
         return; // Impede a submissão do formulário
     }
 
@@ -310,7 +312,7 @@ async function submitProject() {
     const goalInWei = ethers.parseEther(projectForm.value.goal);
 
     // Toast de confirmação do MetaMask
-    pendingToast = toast.info("Enviando transação... Por favor, confirme na carteira.", {
+    pendingToast = toast.info(t('sending_transaction_confirm_wallet'), { // Traduzido
         timeout: false, closeButton: false, closeOnClick: false, draggable: false
     });
 
@@ -326,7 +328,7 @@ async function submitProject() {
 
     toast.dismiss(pendingToast); // Fecha o toast de confirmação do MetaMask
     // Toast de aguardando confirmação da blockchain
-    pendingToast = toast.info("Transação enviada! Aguardando confirmação da blockchain...", {
+    pendingToast = toast.info(t('transaction_sent_waiting_blockchain'), { // Traduzido
         timeout: false, closeButton: false, closeOnClick: false, draggable: false
     });
 
@@ -347,30 +349,30 @@ async function submitProject() {
       name: 'project-details',
       params: { id: newProjectId },
       state: {
-        toastMessage: "Projeto criado com sucesso! 🎉",
+        toastMessage: t('project_created_success'), // Traduzido
         // Adicionando o ID ao estado para que a ProjectPage possa validar se o toast é para ela
         newlyCreatedProjectId: newProjectId
       }
     });
 
   } catch (error: any) {
-    console.error("Erro ao criar projeto:", error);
-    
+    console.error(`${t('error_creating_project_prefix')} ${error}`); // Traduzido
+
     if (pendingToast) { // Certifica-se de fechar qualquer toast pendente em caso de erro
         toast.dismiss(pendingToast);
     }
 
     if (error.code === 'ACTION_REJECTED' || error.code === 4001) { // Erro do usuário rejeitando a transação
-      toast.error("Criação de projeto cancelada pelo usuário.");
+      toast.error(t('project_creation_canceled_by_user')); // Traduzido
     } else {
       // Tenta extrair uma mensagem de erro mais útil do erro da transação
-      let errorMsg = "Ocorreu um erro ao criar o projeto. Por favor, tente novamente.";
+      let errorMsg = t('generic_error_creating_project'); // Traduzido
       if (error.reason) { // Ex: "execution reverted: Goal must be greater than zero"
-          errorMsg = `Erro na Blockchain: ${error.reason}`;
+          errorMsg = `${t('blockchain_error')} ${error.reason}`; // Traduzido
       } else if (error.data && error.data.message) { // Formato comum para erros de revert
-          errorMsg = `Erro na Transação: ${error.data.message}`;
+          errorMsg = `${t('transaction_error')} ${error.data.message}`; // Traduzido
       } else if (error.message) { // Mensagem genérica do erro
-          errorMsg = `Erro: ${error.message.substring(0, 100)}...`; // Limita o tamanho para não poluir
+          errorMsg = `${t('general_error')} ${error.message.substring(0, 100)}...`; // Limita o tamanho para não poluir
       }
       toast.error(errorMsg);
     }

@@ -4,7 +4,7 @@
     <!-- Botão para Conectar Carteira (visível quando não conectado) -->
     <button v-if="!wallet.account" @click="connectWallet"
             class="px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition-all duration-200">
-      Conectar Carteira
+            {{ $t('connect_wallet') }}
     </button>
 
     <!-- Exibição da Carteira Conectada e Dropdown (visível quando conectado) -->
@@ -17,7 +17,7 @@
           <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
         </svg>
         <!-- Endereço Formatado -->
-        {{ formatAddress(wallet.account) }}
+        {{ formatAddress(wallet.account) }} 
         <!-- Ícone de Seta para o Dropdown -->
         <svg xmlns="http://www.w3.org/2000/svg" :class="{'rotate-180': dropdownOpen}" class="ml-2 -mr-1 h-5 w-5 text-gray-400 transition-transform duration-200" viewBox="0 0 20 20" fill="currentColor">
           <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -33,7 +33,7 @@
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-2 text-red-500" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-2 0V4H5v12h7a1 1 0 110 2H4a1 1 0 01-1-1V3zm10 2a1 1 0 01-.845.485l-2.42-1.21A1 1 0 019 4V3a1 1 0 011-1h2a1 1 0 011 1v2zM10 7a1 1 0 011 1v4a1 1 0 11-2 0V8a1 1 0 011-1zm-2 0a1 1 0 011 1v4a1 1 0 11-2 0V8a1 1 0 011-1z" clip-rule="evenodd" />
           </svg>
-          Desconectar
+          {{ $t('disconnect') }}
         </a>
       </div>
     </div>
@@ -50,6 +50,9 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { useWalletStore } from '../stores/wallet'; // Exemplo de caminho relativo
 import Web3Modal from 'web3modal';
 import { ethers } from 'ethers';
+import { useI18n } from 'vue-i18n'; // Importe useI18n
+
+const { t } = useI18n();
 
 const wallet = useWalletStore();
 const dropdownOpen = ref(false);
@@ -76,13 +79,11 @@ function handleAccountsChanged(accounts: string[]) {
     disconnectWallet();
   } else if (wallet.account !== accounts[0]) {
     wallet.account = accounts[0];
-    console.log("Conta alterada para:", accounts[0]);
     errorMessage.value = '';
   }
 }
 
 function handleChainChanged(chainId: string) {
-  console.log("Rede alterada para:", chainId);
   window.location.reload();
 }
 
@@ -108,7 +109,7 @@ async function connectWallet() {
     initWeb3Modal();
 
     if (!window.ethereum && !web3ModalInstance?.cachedProvider) {
-      errorMessage.value = "Nenhum provedor de carteira (como MetaMask) encontrado no navegador.";
+      errorMessage.value = t('no_provider');
       return;
     }
 
@@ -117,18 +118,17 @@ async function connectWallet() {
     const signer = await provider.getSigner();
     const address = await signer.getAddress();
     wallet.account = address;
-    console.log("Carteira conectada:", address);
 
     addProviderListeners(instance);
 
   } catch (err: any) {
-    console.error('Erro ao conectar carteira:', err);
+    console.error(t('error_connect'), err);
     if (err.code === 4001) {
-      errorMessage.value = "Conexão rejeitada pelo usuário.";
+      errorMessage.value = t('connection_rejected');
     } else if (err.message && err.message.includes('No provider found')) {
-      errorMessage.value = "Nenhum provedor de carteira encontrado. Por favor, instale o MetaMask.";
+      errorMessage.value = t('no_provider');
     } else {
-      errorMessage.value = "Erro ao conectar carteira. Verifique o console para mais detalhes.";
+      errorMessage.value = t('error_connect');
     }
   }
 }
@@ -147,7 +147,6 @@ async function disconnectWallet() {
     
     wallet.account = null;
     dropdownOpen.value = false;
-    console.log("Carteira desconectada.");
 
     // Além disso, se a window.ethereum ainda estiver ativa, remove seus listeners
     // Isso é mais defensivo e garante que eventos não sejam disparados após desconectar da dApp
@@ -157,8 +156,8 @@ async function disconnectWallet() {
     }
 
   } catch (err) {
-    console.error("Erro ao desconectar carteira:", err);
-    errorMessage.value = "Erro ao desconectar carteira.";
+    console.error(t('error_disconnect'), err);
+    errorMessage.value = t('error_disconnect');
   }
 }
 
@@ -197,7 +196,7 @@ onUnmounted(() => {
     // Isso é uma tentativa, pois o provedor cacheado pode não ser a instância ativa no momento
     web3ModalInstance.connect().then(instance => {
       removeProviderListeners(instance);
-    }).catch(err => console.error("Erro ao remover listeners no unmounted:", err));
+    }).catch(err => console.error(t('error_unmounted'), err));
   }
 });
 </script>

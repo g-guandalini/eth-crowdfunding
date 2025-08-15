@@ -8,7 +8,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
         </svg>
-        Voltar para todos os projetos
+        {{ $t('back_to_all_projects') }}
       </router-link>
 
       <!-- Novo Botão "Compartilhar no X" -->
@@ -19,16 +19,16 @@
             d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L452.078 685.889L0 1227H105.866L515.404 750.218L838.817 1227H1200L714.163 519.284ZM569.742 687.828L521.617 619.57L144.056 79.1363H306.678L610.742 516.453L658.868 584.71L1055.08 1150.86H892.459L569.742 687.828Z"
             fill="white" />
         </svg>
-        Compartilhar
+        {{ $t('share') }}
       </button>
     </div>
 
     <div v-if="loading" class="text-center text-gray-600 py-10">
-      <p class="text-lg">Carregando detalhes do projeto...</p>
+      <p class="text-lg">{{ $t('loading_project_details') }}</p>
       <div class="mt-4 animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
     </div>
     <div v-else-if="!project" class="text-center text-gray-500 py-10">
-      <p class="text-lg">Projeto não encontrado.</p>
+      <p class="text-lg">{{ $t('project_not_found') }}</p>
     </div>
     <div v-else :class="['grid grid-cols-1 lg:grid-cols-3 gap-8 items-start',]">
       <!-- BLOCO ESQUERDO (Mais largo): Título, Criador, Descrição -->
@@ -41,7 +41,7 @@
           {{ project.title }}
         </h2>
         <p class="text-gray-700 text-base mb-6">
-          <strong class="font-medium">Criador:</strong>
+          <strong class="font-medium">{{ $t('creator') }}:</strong>
           <span class="text-blue-600 hover:underline cursor-pointer break-all">
             {{ formatAddress(project.owner) }}
           </span>
@@ -55,14 +55,14 @@
         <!-- SUB-BLOCO 1 (Detalhes do Projeto e Doação) -->
         <div class="bg-white rounded-xl shadow-lg p-8">
           <div class="text-gray-700 text-base mb-4">
-            <p class="mb-1"><strong>Meta:</strong> {{ parseFloat(project.goal).toFixed(2) }} MON</p>
-            <p class="mb-1"><strong>Arrecadado:</strong> {{ parseFloat(project.amountRaised).toFixed(2) }} MON</p>
+            <p class="mb-1"><strong>{{ $t('goal') }}:</strong> {{ parseFloat(project.goal).toFixed(2) }} MON</p>
+            <p class="mb-1"><strong>{{ $t('raised') }}:</strong> {{ parseFloat(project.amountRaised).toFixed(2) }} MON</p>
             <p class="mb-1">
-              <strong>Prazo:</strong>
-              {{ formatDeadline(project.deadline) }}
+              <strong>{{ $t('deadline') }}:</strong>
+              {{ formatDeadline(project.deadline, locale) }}
             </p>
             <p v-if="project.fixedDonationAmount" class="mt-2 text-sm text-gray-500">
-              (Doação Fixa: {{ parseFloat(project.requiredDonationAmount).toFixed(4) }} MON)
+              ({{ $t('fixed_donation') }}: {{ parseFloat(project.requiredDonationAmount).toFixed(4) }} MON)
             </p>
           </div>
 
@@ -73,7 +73,7 @@
                 :style="{ width: projectProgress(project).toFixed(2) + '%' }"></div>
             </div>
             <p class="text-sm text-gray-500 mt-2 text-right">
-              {{ projectProgress(project).toFixed(2) }}% concluído
+              {{ projectProgress(project).toFixed(2) }}% {{ $t('completed') }}
             </p>
           </div>
 
@@ -82,35 +82,35 @@
             <div class="flex items-center gap-2">
               <!-- Input para o valor da doação -->
               <input type="text" v-model="donationAmountInternal" @input="handleDonationInputChange"
-                :placeholder="project.fixedDonationAmount ? parseFloat(project.requiredDonationAmount).toFixed(4) + ' (Fixo)' : '0.01'"
+                :placeholder="project.fixedDonationAmount ? parseFloat(project.requiredDonationAmount).toFixed(4) + ` (${$t('fixed_text')})` : '0.01'"
                 :readonly="project.fixedDonationAmount" :class="[
                     'flex-grow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 text-center font-mono',
                     { 'bg-gray-100 cursor-not-allowed': project.fixedDonationAmount },
                     'min-w-0'
-                  ]" aria-label="Valor para Doação em MON" />
+                  ]" :aria-label="$t('value_for_donation_mon')" />
               <!-- Botão Doar -->
               <button @click="handleDonate"
                 class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 whitespace-nowrap flex-shrink-0">
-                Doar
+                {{ $t('donate') }}
               </button>
             </div>
             <!-- Indicação da taxa de serviço -->
             <p class="text-xs text-gray-500 mt-1 text-center">
-              ℹ️ Taxa de serviço: 0.25% sobre o valor da doação.
+              ℹ️ {{ $t('service_fee_donation') }}
             </p>
           </div>
           <div v-else class="mt-4 text-center">
             <p v-if="isProjectCompleted(project)" class="text-green-600 font-semibold text-lg">
-              🎉 Parabéns! Meta alcançada! 🎉
+              {{ $t('congrats_goal_reached') }}
             </p>
             <p v-else-if="hasDeadlinePassed(project) && !isProjectCompleted(project)"
               class="text-orange-600 font-semibold text-lg">
-              ⚠️ Prazo encerrado. Meta não alcançada.
+              {{ $t('deadline_passed_goal_not_reached') }}
               <br>
-              <span class="text-sm text-gray-500">(Doadores podem solicitar reembolso individualmente)</span>
+              <span class="text-sm text-gray-500">({{ $t('donors_can_request_refund') }})</span>
             </p>
             <p v-else class="text-gray-500 text-lg">
-              Projeto inativo ou em estado especial.
+              {{ $t('project_inactive_special_status') }}
             </p>
           </div>
         </div>
@@ -121,15 +121,15 @@
           <div class="mb-4 flex flex-col space-y-3">
             <button v-if="canWithdrawGoal" @click="handleWithdrawGoal"
               class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 w-full">
-              Sacar Meta ({{ parseFloat(project.amountRaised).toFixed(2) }} MON)
+              {{ $t('withdraw_goal') }} ({{ parseFloat(project.amountRaised).toFixed(2) }} MON)
             </button>
             <button v-if="canClaimRefund" @click="handleClaimRefund"
               class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 w-full">
-              Sacar Doação ({{ myDonationAmount.toFixed(4) }} MON)
+              {{ $t('withdraw_donation') }} ({{ myDonationAmount.toFixed(4) }} MON)
             </button>
           </div>
 
-          <h3 class="font-bold text-gray-700 mb-2">Doadores:</h3>
+          <h3 class="font-bold text-gray-700 mb-2">{{ $t('donors') }}:</h3>
           <div v-if="project.donors && project.donors.length > 0" class="max-h-48 overflow-y-auto custom-scrollbar">
             <ul class="list-disc list-inside text-gray-600 text-sm">
               <li v-for="(donor, dIndex) in project.donors" :key="dIndex">
@@ -138,7 +138,7 @@
             </ul>
           </div>
           <p v-else class="text-sm text-gray-500 italic">
-            Ainda não há doadores para este projeto.
+            {{ $t('no_donors_yet') }}
           </p>
         </div>
       </div>
@@ -163,6 +163,9 @@ import {
 } from '@/utils/projectHelpers'; // Certifique-se de que este caminho está correto
 import { marked } from 'marked';
 import { useToast } from "vue-toastification";
+import { useI18n } from 'vue-i18n'; // IMPORTANTE: Importar useI18n
+
+const { t, locale } = useI18n(); // IMPORTANTE: Inicializar useI18n para usar t() no script
 
 const props = defineProps<{
   id: string;
@@ -183,7 +186,7 @@ const toast = useToast();
 // Função para compartilhar no X (Twitter)
 function shareOnX() {
   if (!project.value) {
-    toast.error("Projeto não carregado para compartilhamento.");
+    toast.error(t('project_not_loaded_for_sharing')); // Traduzido
     return;
   }
 
@@ -198,11 +201,11 @@ function shareOnX() {
 
 async function handleDonate() {
   if (!window.ethereum) { // Verificação para transações
-    toast.error("MetaMask (ou outra carteira Ethereum) não detectada. Por favor, instale e conecte-se para realizar doações.");
+    toast.error(t('no_wallet_detected_donate')); // Traduzido
     return;
   }
   if (!project.value) {
-    toast.error("Projeto não carregado.");
+    toast.error(t('project_not_loaded')); // Traduzido
     return;
   }
 
@@ -214,7 +217,7 @@ async function handleDonate() {
 
   const parsedAmount = parseFloat(amountToSend);
   if (!amountToSend || amountToSend === '.' || isNaN(parsedAmount) || parsedAmount < 0.001) {
-    toast.warning("Por favor, insira um valor válido para a doação, igual ou superior a 0.001 MON.");
+    toast.warning(t('please_enter_valid_donation_value')); // Traduzido
     return;
   }
 
@@ -226,7 +229,7 @@ async function handleDonate() {
     const signer = await provider.getSigner();
     const contract = new ethers.Contract(CROWDFUNDING_ADDRESS, CROWDFUNDING_ABI, signer);
 
-    pendingToast = toast.info("Confirmando sua doação... Por favor, aguarde a transação ser confirmada.", {
+    pendingToast = toast.info(t('confirming_your_donation'), { // Traduzido
       timeout: false,
       closeButton: false,
       closeOnClick: false,
@@ -240,21 +243,21 @@ async function handleDonate() {
     await tx.wait();
 
     toast.dismiss(pendingToast);
-    toast.success("Doação realizada com sucesso! 🎉");
+    toast.success(t('donation_successful')); // Traduzido
     await loadProjectDetails(projectId.value); // Recarregar com o novo estado
   } catch (error: any) {
-    console.error("Erro ao doar:", error);
+    console.error(t('error_donating'), error); // Traduzido
 
     if (pendingToast) {
       toast.dismiss(pendingToast);
     }
 
     if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
-      toast.error("Doação cancelada pelo usuário.");
+      toast.error(t('donation_canceled_by_user')); // Traduzido
     } else if (error.message && error.message.includes("Must send exact fixed donation amount")) {
-      toast.error(`Para este projeto, você deve doar exatamente ${parseFloat(project.value.requiredDonationAmount || '0').toFixed(4)} MON.`);
+      toast.error(`${t('for_this_project_you_must_donate_exactly')} ${parseFloat(project.value.requiredDonationAmount || '0').toFixed(4)} MON.`); // Traduzido
     } else {
-      toast.error("Ocorreu um erro ao processar sua doação. Por favor, tente novamente.");
+      toast.error(t('an_error_occurred_processing_donation')); // Traduzido
     }
   }
 }
@@ -262,7 +265,7 @@ async function handleDonate() {
 // NOVO: Função para o proprietário sacar os fundos
 async function handleWithdrawGoal() {
   if (!window.ethereum) { // Verificação para transações
-    toast.error("MetaMask (ou outra carteira Ethereum) não detectada. Por favor, instale e conecte-se para sacar os fundos.");
+    toast.error(t('no_wallet_detected_withdraw')); // Traduzido
     return;
   }
   if (!project.value) return;
@@ -272,22 +275,22 @@ async function handleWithdrawGoal() {
     const signer = await provider.getSigner();
     const contract = new ethers.Contract(CROWDFUNDING_ADDRESS, CROWDFUNDING_ABI, signer);
 
-    pendingToast = toast.info("Solicitando saque da meta... Por favor, aguarde a transação.", {
+    pendingToast = toast.info(t('requesting_goal_withdrawal'), { // Traduzido
       timeout: false, closeButton: false, closeOnClick: false, draggable: false,
     });
 
     const tx = await contract.withdrawFunds(project.value.id);
     await tx.wait();
     toast.dismiss(pendingToast);
-    toast.success("Saque da meta realizado com sucesso! 🎉");
+    toast.success(t('goal_withdrawal_successful')); // Traduzido
     await loadProjectDetails(projectId.value); // Recarrega os detalhes do projeto para atualizar o estado
   } catch (error: any) {
-    console.error("Erro ao sacar meta:", error);
+    console.error(t('error_withdrawing_goal'), error); // Traduzido
     if (pendingToast) toast.dismiss(pendingToast);
     if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
-      toast.error("Saque da meta cancelado pelo usuário.");
+      toast.error(t('goal_withdrawal_canceled_by_user')); // Traduzido
     } else {
-      toast.error(`Erro ao sacar meta: ${error.reason || error.message || 'Verifique os requisitos.'}`);
+      toast.error(`${t('error_withdrawing_goal')} ${error.reason || error.message || t('check_requirements')}`); // Traduzido
     }
   }
 }
@@ -295,7 +298,7 @@ async function handleWithdrawGoal() {
 // NOVO: Função para o doador solicitar reembolso
 async function handleClaimRefund() {
   if (!window.ethereum) { // Verificação para transações
-    toast.error("MetaMask (ou outra carteira Ethereum) não detectada. Por favor, instale e conecte-se para solicitar o reembolso.");
+    toast.error(t('no_wallet_detected_refund')); // Traduzido
     return;
   }
   if (!project.value) return;
@@ -305,22 +308,22 @@ async function handleClaimRefund() {
     const signer = await provider.getSigner();
     const contract = new ethers.Contract(CROWDFUNDING_ADDRESS, CROWDFUNDING_ABI, signer);
 
-    pendingToast = toast.info("Solicitando reembolso da doação... Por favor, aguarde a transação.", {
+    pendingToast = toast.info(t('requesting_donation_refund'), { // Traduzido
       timeout: false, closeButton: false, closeOnClick: false, draggable: false,
     });
 
     const tx = await contract.claimRefund(project.value.id);
     await tx.wait();
     toast.dismiss(pendingToast);
-    toast.success("Reembolso da doação realizado com sucesso! ✅");
+    toast.success(t('donation_refund_successful')); // Traduzido
     await loadProjectDetails(projectId.value); // Recarrega os detalhes do projeto para atualizar o estado
   } catch (error: any) {
-    console.error("Erro ao solicitar reembolso:", error);
+    console.error(t('error_requesting_refund'), error); // Traduzido
     if (pendingToast) toast.dismiss(pendingToast);
     if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
-      toast.error("Reembolso cancelado pelo usuário.");
+      toast.error(t('refund_canceled_by_user')); // Traduzido
     } else {
-      toast.error(`Erro ao solicitar reembolso: ${error.reason || error.message || 'Verifique os requisitos.'}`);
+      toast.error(`${t('error_requesting_refund')} ${error.reason || error.message || t('check_requirements')}`); // Traduzido
     }
   }
 }
@@ -341,25 +344,24 @@ async function loadProjectDetails(id: number) {
         // Tenta obter o signatário e o endereço conectado
         const signer = await providerInstance.getSigner();
         connectedWalletAddress.value = await signer.getAddress();
-        console.log("Carteira conectada (ProjectPage):", connectedWalletAddress.value);
       } catch (e) {
         // Se a inicialização do BrowserProvider ou getSigner falhar
         // (ex: usuário recusa conexão, ou nenhuma conta selecionada)
-        console.warn("MetaMask detectado, mas não foi possível conectar ou obter o endereço do signatário. Carregando projetos em modo somente leitura (ProjectPage).", e);
+        console.warn(t('wallet_detected_but_cannot_connect_readonly'), e); // Traduzido
         // Fallback para um provedor RPC público para operações somente leitura
         // IMPORTANTE: Substitua pelo URL RPC real da sua Monad Testnet!
-        providerInstance = new ethers.JsonRpcProvider("https://monad-testnet.drpc.org");
+        providerInstance = new ethers.JsonRpcProvider("https://rpc.ankr.com/monad_testnet");
       }
     } else {
       // Caminho 2: MetaMask (ou carteira compatível) NÃO é detectado
-      console.warn("MetaMask não detectado. Carregando projetos com provedor público (somente leitura - ProjectPage).");
+      console.warn(t('no_wallet_detected_public_readonly')); // Traduzido
       // Use um provedor RPC público para operações somente leitura
       // IMPORTANTE: Substitua pelo URL RPC real da sua Monad Testnet!
-      providerInstance = new ethers.JsonRpcProvider("https://monad-testnet.drpc.org");
+      providerInstance = new ethers.JsonRpcProvider("https://rpc.ankr.com/monad_testnet");
     }
 
     if (!providerInstance) {
-      throw new Error("Não foi possível inicializar um provedor Ethereum para ProjectPage. Verifique a configuração do RPC.");
+      throw new Error(t('cannot_initialize_ethereum_provider')); // Traduzido
     }
 
     // O contrato agora é inicializado com o providerInstance que pode ser BrowserProvider ou JsonRpcProvider
@@ -374,7 +376,7 @@ async function loadProjectDetails(id: number) {
         const donation = await contract.getDonation(id, connectedWalletAddress.value);
         myDonationAmount.value = parseFloat(ethers.formatEther(donation));
       } catch (e) {
-        console.error("Erro ao buscar doação do usuário logado:", e);
+        console.error(t('error_fetching_user_donation'), e); // Traduzido
         myDonationAmount.value = 0;
       }
     }
@@ -411,12 +413,12 @@ async function loadProjectDetails(id: number) {
     }
 
   } catch (error: any) {
-    console.error(`Erro ao carregar projeto com ID ${id}:`, error);
+    console.error(`${t('error_loading_project_with_id')} ${id}:`, error); // Traduzido
     project.value = null;
     if (error.code === "CALL_EXCEPTION" && (error.data === "0x" || (error.data && error.data.message && error.data.message.includes("Invalid project ID")))) {
-      toast.error("Projeto não encontrado ou ID inválido na blockchain.");
+      toast.error(t('project_not_found_or_invalid_blockchain_id')); // Traduzido
     } else {
-      toast.error("Ocorreu um erro ao carregar os detalhes do projeto. Verifique a conexão com a blockchain e o URL RPC.");
+      toast.error(t('an_error_occurred_loading_project_details')); // Traduzido
     }
   } finally {
     loading.value = false;
