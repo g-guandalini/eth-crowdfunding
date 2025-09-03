@@ -19,8 +19,8 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
         <!-- Coluna Esquerda: Meta, Arrecadado, Progresso -->
         <div>
-          <p class="mb-1 text-gray-700"><strong>{{ $t('goal') }}</strong> {{ parseFloat(project.goal).toFixed(2) }} MON</p>
-          <p class="mb-3 text-gray-700"><strong>{{ $t('raised') }}</strong> {{ parseFloat(project.amountRaised).toFixed(2) }} MON</p>
+          <p class="mb-1 text-gray-700"><strong>{{ $t('goal') }}</strong> {{ parseFloat(project.goal).toFixed(2) }} {{ currentCurrencySymbol }}</p>
+          <p class="mb-3 text-gray-700"><strong>{{ $t('raised') }}</strong> {{ parseFloat(project.amountRaised).toFixed(2) }} {{ currentCurrencySymbol }}</p>
           
           <!-- Barra de Progresso -->
           <div class="w-full bg-gray-200 rounded-full h-2.5 mb-1">
@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue';
+import { defineProps, inject, computed, ref } from 'vue'; // Adicionado inject, computed, ref
 import type { Project } from '@/types/project';
 import {
   projectProgress,
@@ -69,13 +69,22 @@ import {
   formatDeadline,
   getProjectBorderClass
 } from '@/utils/projectHelpers';
-import { useI18n } from 'vue-i18n'; // IMPORTANTE: Importar useI18n
+import { useI18n } from 'vue-i18n';
 
-const { t, locale } = useI18n(); // IMPORTANTE: Inicializar useI18n para que $t funcione no template
+const { t, locale } = useI18n();
 
 const props = defineProps<{
   project: Project;
 }>();
+
+// INJETANDO DADOS DO APP.VUE
+const selectedNetwork = inject('selectedNetwork', ref(null)); // 'ref(null)' é um valor padrão caso não seja fornecido
+
+// PROPRIEDADE COMPUTADA PARA O SÍMBOLO DA MOEDA
+const currentCurrencySymbol = computed(() => {
+    // Retorna o símbolo da moeda da rede selecionada, ou 'MON' como fallback padrão
+    return selectedNetwork.value?.currency?.symbol || 'MON';
+});
 </script>
 
 <style scoped>

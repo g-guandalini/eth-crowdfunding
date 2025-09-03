@@ -12,18 +12,29 @@ const config: HardhatUserConfig = {
     hardhat: {
       // Sua configuração de hardhat local
     },
-    monadTestnet: { // Nome da sua rede Monad Testnet (você pode nomear como quiser)
-      url: "https://monad-testnet.drpc.org", // RPC HTTP é geralmente preferido para deploys
-      // Nota: drpc.org oferece WSS, mas para deploys HTTP costuma ser mais comum.
-      // Tente com HTTP se o WSS não funcionar para deploy.
-      // Se for somente WSS, pode ser necessário um plugin Hardhat adicional.
-      // Para este exemplo, usaremos o URL HTTPS que o drpc.org também oferece.
-      chainId: 10143, // Chain ID da testnet Monad que você forneceu
-      accounts: [process.env.PRIVATE_KEY as string], // Chave privada da sua conta de deploy
+    monadTestnet: {
+      url: "https://monad-testnet.drpc.org",
+      chainId: 10143,
+      accounts: [process.env.PRIVATE_KEY as string],
     },
-    // ... outras redes que você possa ter
-  },
-  // ... outras configurações
+    // --- NOVAS REDES ---
+    somniaTestnet: {
+      url: "https://dream-rpc.somnia.network", // RPC da Somnia Testnet
+      chainId: 50312, // Chain ID da Somnia Testnet
+      accounts: [process.env.PRIVATE_KEY as string],
+    },
+    pharosTestnet: {
+      url: "https://testnet.dplabs-internal.com", // RPC da Pharos Testnet
+      chainId: 688688, // Chain ID da Pharos Testnet
+      accounts: [process.env.PRIVATE_KEY as string],
+    },
+    megaethTestnet: {
+      url: "https://carrot.megaeth.com/rpc", // RPC da MegaETH Testnet
+      chainId: 6342, // Chain ID da MegaETH Testnet
+      accounts: [process.env.PRIVATE_KEY as string],
+    },
+    // --- FIM NOVAS REDES ---
+  }
 };
 
 export default config;

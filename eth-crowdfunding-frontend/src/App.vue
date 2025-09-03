@@ -2,30 +2,83 @@
   <div id="app" class="min-h-screen bg-gray-50 flex flex-col">
     <!-- Cabeçalho fixo com flex-wrap e paddings responsivos -->
     <header class="bg-[#1f0053] text-white px-3 py-2 shadow-md flex flex-wrap justify-between items-center fixed top-0 w-full z-20
-                   md:px-6 md:py-4"> <!-- px-3 py-2 para telas menores, md:px-6 md:py-4 para maiores -->
+                   md:px-6 md:py-4">
 
-      <div class="flex-shrink-0 py-1"> <!-- py-1 para dar um respiro vertical se houver quebra de linha -->
+      <div class="flex-shrink-0 py-1">
         <router-link to="/">
-          <img src="/src/logo_horizontal_.png" alt="Spark Logo" class="h-10 md:h-12" /> <!-- h-10 para menores, md:h-12 para maiores -->
+          <img src="/src/logo_horizontal_.png" alt="Spark Logo" class="h-8 md:h-8" />
         </router-link>
       </div>
 
       <!-- Novo container para agrupar e controlar a responsividade dos itens à direita -->
-      <div class="flex items-center flex-wrap space-x-2 py-1 md:space-x-4 justify-end">
-        <!-- Links de navegação com fonte responsiva e sem quebra de linha -->
+      <!-- REMOVIDO: py-1 -->
+      <div class="flex items-center flex-wrap space-x-2 md:space-x-4 justify-end"> 
+        <!-- Links de navegação -->
         <router-link to="/" class="text-white text-sm md:text-base hover:text-blue-200 whitespace-nowrap">
           {{ $t('projects') }}
         </router-link>
         <router-link to="/create" class="text-white text-sm md:text-base hover:text-blue-200 whitespace-nowrap">
           {{ $t('createProject') }}
         </router-link>
-        <!-- LanguageSwitcher e WalletConnect -->
+        <!-- LanguageSwitcher -->
         <LanguageSwitcher />
+
+        <!-- Network Selector Customizado -->
+        <div class="relative inline-block text-left z-30" v-click-outside="closeDropdown">
+          <div>
+            <button
+              type="button"
+              class="inline-flex justify-center items-center w-full rounded-md border border-gray-600 shadow-sm px-4 py-2 
+                     bg-[#1f0053] text-sm md:text-base font-medium text-white hover:bg-[#2a0063] 
+                     focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#1f0053] focus:ring-blue-500"
+              @click="toggleDropdown"
+              aria-haspopup="true"
+              :aria-expanded="isDropdownOpen ? 'true' : 'false'"
+            >
+              <!-- Exibir logo e nome da rede selecionada -->
+              <img v-if="selectedNetwork" :src="selectedNetwork.logo" :alt="selectedNetwork.name" class="h-5 w-5 mr-2 rounded-full" />
+              <span v-if="selectedNetwork">{{ selectedNetwork.name }}</span>
+              <span v-else>{{ $t('selectNetwork') || 'Select Network' }}</span>
+
+              <!-- Ícone de seta do dropdown -->
+              <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Painel do Dropdown (oculto por padrão) -->
+          <div
+            v-if="isDropdownOpen"
+            class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg 
+                   bg-[#1f0053] ring-1 ring-black ring-opacity-5 focus:outline-none"
+            role="menu"
+            aria-orientation="vertical"
+            aria-labelledby="menu-button"
+            tabindex="-1"
+          >
+            <div class="py-1" role="none">
+              <a
+                v-for="(network, key) in NETWORKS"
+                :key="key"
+                href="#"
+                class="text-white block px-4 py-2 text-sm hover:bg-[#2a0063] flex items-center"
+                role="menuitem"
+                tabindex="-1"
+                @click.prevent="selectNetwork(key)"
+              >
+                <img :src="network.logo" :alt="network.name" class="h-5 w-5 mr-3 rounded-full" />
+                {{ network.name }}
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- WalletConnect -->
         <WalletConnect />
       </div>
     </header>
 
-    <!-- Conteúdo principal: pt-20 ainda é um bom valor seguro para o padding superior -->
     <main class="flex-grow pt-20">
       <router-view />
     </main>
@@ -59,8 +112,146 @@
 </template>
 
 <script setup>
+import { ref, onMounted, onUnmounted, computed, provide, watch } from 'vue'; // Adicionado 'provide' e 'watch'
 import WalletConnect from './components/ConnectWallet.vue';
 import LanguageSwitcher from './components/LanguageSwitcher.vue';
+import { NETWORKS, CONTRACT_ADDRESSES, DEFAULT_NETWORK_KEY } from './networks.js'; // Importar tudo de networks.js
+
+const selectedNetworkKey = ref(DEFAULT_NETWORK_KEY); // Inicializa com a rede padrão
+const isDropdownOpen = ref(false);
+
+const selectedNetwork = computed(() => {
+  return selectedNetworkKey.value ? NETWORKS[selectedNetworkKey.value] : null;
+});
+
+// **PROVISIONANDO DADOS PARA COMPONENTES FILHO/NETO**
+// Isso torna 'selectedNetwork', 'NETWORKS' e 'CONTRACT_ADDRESSES' acessíveis para qualquer componente
+// abaixo de App.vue na árvore de componentes que usar 'inject'.
+provide('selectedNetwork', selectedNetwork);
+provide('NETWORKS', NETWORKS);
+provide('CONTRACT_ADDRESSES', CONTRACT_ADDRESSES);
+
+
+// ... (o restante das suas funções e hooks de lifecycle) ...
+
+// Diretiva customizada para fechar o dropdown ao clicar fora
+const vClickOutside = {
+  mounted(el, binding) {
+    el.__ClickOutsideHandler__ = (event) => {
+      if (!(el === event.target || el.contains(event.target))) {
+        binding.value(event);
+      }
+    };
+    document.addEventListener('click', el.__ClickOutsideHandler__);
+  },
+  unmounted(el) {
+    document.removeEventListener('click', el.__ClickOutsideHandler__);
+  }
+};
+
+const toHexChainId = (chainId) => '0x' + parseInt(chainId, 10).toString(16);
+
+const updateSelectedNetworkFromWallet = async () => {
+  if (window.ethereum) {
+    try {
+      const currentChainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+      const currentChainIdDecimal = parseInt(currentChainIdHex, 16).toString();
+
+      const foundKey = Object.keys(NETWORKS).find(key => NETWORKS[key].chainId === currentChainIdDecimal);
+      if (foundKey) {
+        selectedNetworkKey.value = foundKey;
+      } else {
+        selectedNetworkKey.value = ''; // Resetar se a rede atual não estiver na nossa lista
+        console.warn(`Rede atual (${currentChainIdHex}) não está na lista de redes suportadas.`);
+      }
+    } catch (error) {
+      console.error("Erro ao obter o Chain ID da carteira:", error);
+      selectedNetworkKey.value = '';
+    }
+  }
+};
+
+const toggleDropdown = () => {
+  isDropdownOpen.value = !isDropdownOpen.value;
+};
+
+const closeDropdown = () => {
+  isDropdownOpen.value = false;
+};
+
+const selectNetwork = async (networkKey) => {
+  closeDropdown();
+  const targetNetwork = NETWORKS[networkKey];
+
+  if (!targetNetwork) {
+    console.error("Rede selecionada não encontrada:", networkKey);
+    alert("Rede selecionada inválida.");
+    updateSelectedNetworkFromWallet();
+    return;
+  }
+
+  if (!window.ethereum) {
+    alert("Por favor, instale uma carteira compatível com Ethereum, como MetaMask.");
+    return;
+  }
+
+  const targetChainIdHex = toHexChainId(targetNetwork.chainId);
+
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: targetChainIdHex }],
+    });
+    console.log(`Cambiou para a rede: ${targetNetwork.name}`);
+  } catch (switchError) {
+    if (switchError.code === 4902) {
+      try {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: targetChainIdHex,
+              chainName: targetNetwork.name,
+              rpcUrls: [targetNetwork.rpcUrl],
+              nativeCurrency: targetNetwork.currency,
+              blockExplorerUrls: targetNetwork.blockExplorerUrl
+                ? [targetNetwork.blockExplorerUrl]
+                : undefined,
+            },
+          ],
+        });
+      } catch (addError) {
+        console.error("Erro ao adicionar a rede:", addError);
+        alert(
+          `Não foi possível adicionar a rede ${targetNetwork.name}. Por favor, adicione-a manualmente na sua carteira.`
+        );
+        updateSelectedNetworkFromWallet();
+      }
+    } else {
+      console.error("Erro ao mudar de rede:", switchError);
+      alert(
+        `Não foi possível mudar para a rede ${targetNetwork.name}. Por favor, tente novamente ou mude-a manualmente na sua carteira.`
+      );
+      updateSelectedNetworkFromWallet();
+    }
+  }
+};
+
+onMounted(() => {
+  if (window.ethereum) {
+    window.ethereum.on('chainChanged', updateSelectedNetworkFromWallet);
+    // Também ouça por 'accountsChanged' para atualizar o endereço da carteira
+    window.ethereum.on('accountsChanged', updateSelectedNetworkFromWallet);
+    updateSelectedNetworkFromWallet();
+  }
+});
+
+onUnmounted(() => {
+  if (window.ethereum) {
+    window.ethereum.removeListener('chainChanged', updateSelectedNetworkFromWallet);
+    window.ethereum.removeListener('accountsChanged', updateSelectedNetworkFromWallet);
+  }
+});
 </script>
 
 <style>
