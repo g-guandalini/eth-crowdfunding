@@ -6,7 +6,7 @@ export const  NETWORKS = {
       rpcUrl: "https://rpc.ankr.com/monad_testnet", // Exemplo, substitua pela URL RPC real
       currency: { name: "MON", symbol: "MON", decimals: 18 },
       blockExplorerUrl: "https://testnet.monadexplorer.com/",
-      logo: "/src/monad_logo.png", 
+      logo: "/network/monad_logo.png", 
     },
     somnia: {
       name: "Somnia",
@@ -14,7 +14,7 @@ export const  NETWORKS = {
       rpcUrl: "https://dream-rpc.somnia.network", // Exemplo, substitua pela URL RPC real
       currency: { name: "STT", symbol: "STT", decimals: 18 },
       blockExplorerUrl: "https://shannon-explorer.somnia.network/",
-      logo: "/src/somnia_logo.svg"
+      logo: "/network/somnia_logo.svg"
     },
     pharos: {
       name: "Pharos",
@@ -22,7 +22,7 @@ export const  NETWORKS = {
       rpcUrl: "https://api.zan.top/node/v1/pharos/testnet/5a930d4746de4e3aa722c8dd27260f8a", // Exemplo, substitua pela URL RPC real
       currency: { name: "PHRS", symbol: "PHRS", decimals: 18 },
       blockExplorerUrl: "https://pharos-testnet.socialscan.io/",
-      logo: "/src/pharos_logo.svg"
+      logo: "/network/pharos_logo.svg"
     },
     mega: {
       name: "MegaETH",
@@ -30,7 +30,7 @@ export const  NETWORKS = {
       rpcUrl: "https://carrot.megaeth.com/rpc", // Exemplo, substitua pela URL RPC real
       currency: { name: "ETH", symbol: "ETH", decimals: 18 },
       blockExplorerUrl: "https://www.megaexplorer.xyz/",
-      logo: "/src/mega_logo.png"
+      logo: "/network/mega_logo.png"
     },
   };
 
