@@ -40,7 +40,8 @@
       </div>
 
       <div>
-        <label for="goal" class="block text-sm font-medium text-gray-700 mb-1">{{ $t('goal_label') }}</label>
+        <!-- Usando currentCurrencySymbol -->
+        <label for="goal" class="block text-sm font-medium text-gray-700 mb-1">{{ $t('goal_label', { currency: currentCurrencySymbol }) }}</label>
         <input
           type="text"
           id="goal"
@@ -94,7 +95,8 @@
 
       <!-- Campo para Valor Fixo, visível apenas se isFixedDonation for true -->
       <div v-if="projectForm.isFixedDonation">
-        <label for="fixedDonationValue" class="block text-sm font-medium text-gray-700 mb-1">{{ $t('fixed_donation_label') }}</label>
+        <!-- Usando currentCurrencySymbol -->
+        <label for="fixedDonationValue" class="block text-sm font-medium text-gray-700 mb-1">{{ $t('fixed_donation_label', { currency: currentCurrencySymbol }) }}</label>
         <input
           type="text"
           id="fixedDonationValue"
@@ -109,29 +111,50 @@
 
       <button
         type="submit"
-        :disabled="isCreatingProject"
+        :disabled="isCreatingProject || !selectedNetwork"
         class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-[#1f0053] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300 transform"
-        :class="{ 'opacity-50 cursor-not-allowed': isCreatingProject }"
+        :class="{ 'opacity-50 cursor-not-allowed': isCreatingProject || !selectedNetwork }"
       >
         <span v-if="isCreatingProject" class="flex items-center">
           <div class="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-3"></div>
           {{ $t('creating_project_button') }}
         </span>
+        <span v-else-if="!selectedNetwork" class="flex items-center">
+          {{ $t('select_network_to_create_project') }}
+        </span>
         <span v-else>{{ $t('create_project_button') }}</span>
       </button>
+      <p v-if="!selectedNetwork" class="text-center text-gray-500 text-sm mt-2">
+        {{ $t('please_select_network_above') }}
+      </p>
     </form>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, inject } from "vue"; // Adicionado 'inject'
 import { ethers } from "ethers";
-import { CROWDFUNDING_ABI, CROWDFUNDING_ADDRESS } from "../contracts";
+import { CROWDFUNDING_ABI } from "../contracts"; // CROWDFUNDING_ADDRESS removido
 import { useRouter } from 'vue-router';
 import { useToast } from "vue-toastification";
-import { useI18n } from 'vue-i18n'; // IMPORTANTE: Importar useI18n
+import { useI18n } from 'vue-i18n';
 
-const { t } = useI18n(); // IMPORTANTE: Inicializar useI18n para usar t() no script
+const { t } = useI18n();
+
+// INJETANDO DADOS DO APP.VUE
+const selectedNetwork = inject('selectedNetwork', ref(null));
+const CONTRACT_ADDRESSES = inject('CONTRACT_ADDRESSES');
+
+// Variáveis para armazenar o RPC e Endereço do Contrato da rede ATIVA
+const currentRpcUrl = ref<string | null>(null);
+const currentContractAddress = ref<string | null>(null);
+
+// PROPRIEDADE COMPUTADA PARA O SÍMBOLO DA MOEDA
+const currentCurrencySymbol = computed(() => {
+    // Retorna o símbolo da moeda da rede selecionada, ou 'MON' como fallback padrão
+    return selectedNetwork.value?.currency?.symbol || 'MON';
+});
+
 
 // Interface para o formulário
 interface ProjectForm {
@@ -203,7 +226,7 @@ function handleNumericInput(form: ProjectForm, field: 'goal' | 'fixedDonationVal
   // Validação específica para cada campo
   if (field === 'goal') {
     if (value === '' || parseFloat(value) <= 0 || isNaN(parseFloat(value))) {
-      goalError.value = t('goal_numeric_positive_error'); // Traduzido
+      goalError.value = t('goal_numeric_positive_error');
     } else {
       goalError.value = "";
     }
@@ -211,7 +234,8 @@ function handleNumericInput(form: ProjectForm, field: 'goal' | 'fixedDonationVal
     const parsedValue = parseFloat(value);
     // Validação para valor fixo ser >= 0.001
     if (value === '' || isNaN(parsedValue) || parsedValue < 0.001) {
-      fixedDonationValueError.value = t('fixed_value_min_error'); // Traduzido
+      // Passa o currentCurrencySymbol para a mensagem de erro
+      fixedDonationValueError.value = t('fixed_value_min_error', { currency: currentCurrencySymbol.value });
     } else {
       fixedDonationValueError.value = "";
     }
@@ -240,24 +264,41 @@ async function submitProject() {
   deadlineError.value = "";
   fixedDonationValueError.value = "";
 
+  // 1. Determinar o RPC e Endereço do Contrato com base na rede selecionada
+  if (!selectedNetwork.value) {
+    toast.error(t('select_network_to_create_project'));
+    isCreatingProject.value = false;
+    return;
+  }
+
+  const chainIdDecimal = selectedNetwork.value.chainId;
+  currentRpcUrl.value = selectedNetwork.value.rpcUrl; // Não é usado diretamente para transações, mas pode ser útil para debug
+  currentContractAddress.value = CONTRACT_ADDRESSES[chainIdDecimal];
+
+  if (!currentContractAddress.value) {
+    toast.error(`Endereço de contrato não encontrado para a rede ${selectedNetwork.value.name}. Verifique networks.js`);
+    isCreatingProject.value = false;
+    return;
+  }
+
   if (titleExceeded.value) {
-    toast.error(t('title_exceeded_limit', { max: 50 })); // Traduzido
+    toast.error(t('title_exceeded_limit', { max: 50 }));
     return;
   }
   // Validação básica dos campos de texto
   if (!projectForm.value.title.trim()) {
-    toast.error(t('title_required')); // Traduzido
+    toast.error(t('title_required'));
     return;
   }
   if (!projectForm.value.description.trim()) {
-    toast.error(t('description_required')); // Traduzido
+    toast.error(t('description_required'));
     return;
   }
 
   // Validação da Meta
   handleNumericInput(projectForm.value, 'goal');
   if (goalError.value) {
-    toast.error(t('correct_goal_field')); // Traduzido
+    toast.error(t('correct_goal_field'));
     return;
   }
   // Convertendo a meta para número para comparação
@@ -266,16 +307,16 @@ async function submitProject() {
 
   // Validação da Data Limite
   if (!projectForm.value.deadlineDate) {
-    deadlineError.value = t('deadline_required'); // Traduzido
-    toast.error(t('correct_deadline_field')); // Traduzido
+    deadlineError.value = t('deadline_required');
+    toast.error(t('correct_deadline_field'));
     return;
   }
   const selectedDate = new Date(projectForm.value.deadlineDate);
   const now = new Date();
   now.setHours(0, 0, 0, 0); // Zera a hora para comparar apenas a data
   if (selectedDate < now) {
-    deadlineError.value = t('deadline_in_future_error'); // Traduzido
-    toast.error(t('deadline_in_future_error')); // Traduzido
+    deadlineError.value = t('deadline_in_future_error');
+    toast.error(t('deadline_in_future_error'));
     return;
   }
   // Converte a data selecionada para Unix timestamp (segundos)
@@ -286,15 +327,15 @@ async function submitProject() {
   if (projectForm.value.isFixedDonation) {
     handleNumericInput(projectForm.value, 'fixedDonationValue');
     if (fixedDonationValueError.value) {
-      toast.error(t('correct_fixed_donation_field')); // Traduzido
+      toast.error(t('correct_fixed_donation_field'));
       return;
     }
     const fixedDonationNumericValue = parseFloat(projectForm.value.fixedDonationValue);
 
     // >>> NOVA TRATATIVA: Valor fixo de doação não pode ser maior que a meta <<<
     if (fixedDonationNumericValue > goalNumericValue) {
-        fixedDonationValueError.value = t('fixed_value_greater_than_goal_error'); // Traduzido
-        toast.error(t('fixed_value_greater_than_goal_error')); // Traduzido
+        fixedDonationValueError.value = t('fixed_value_greater_than_goal_error');
+        toast.error(t('fixed_value_greater_than_goal_error'));
         return; // Impede a submissão do formulário
     }
 
@@ -307,12 +348,24 @@ async function submitProject() {
   try {
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
-    const contract = new ethers.Contract(CROWDFUNDING_ADDRESS, CROWDFUNDING_ABI, signer);
+
+    // **VERIFICAÇÃO CRÍTICA: A carteira do usuário está na mesma rede que a aplicação?**
+    const walletNetwork = await provider.getNetwork();
+    const targetChainIdDecimal = selectedNetwork.value.chainId;
+
+    if (walletNetwork.chainId.toString() !== targetChainIdDecimal) {
+      toast.error(`Sua carteira está na rede ${walletNetwork.name}, mas a aplicação está configurada para ${selectedNetwork.value.name}. Por favor, mude sua carteira para a rede ${selectedNetwork.value.name} antes de criar o projeto.`);
+      isCreatingProject.value = false;
+      return;
+    }
+
+    // Usar o endereço do contrato da rede selecionada
+    const contract = new ethers.Contract(currentContractAddress.value, CROWDFUNDING_ABI, signer);
 
     const goalInWei = ethers.parseEther(projectForm.value.goal);
 
     // Toast de confirmação do MetaMask
-    pendingToast = toast.info(t('sending_transaction_confirm_wallet'), { // Traduzido
+    pendingToast = toast.info(t('sending_transaction_confirm_wallet'), {
         timeout: false, closeButton: false, closeOnClick: false, draggable: false
     });
 
@@ -328,7 +381,7 @@ async function submitProject() {
 
     toast.dismiss(pendingToast); // Fecha o toast de confirmação do MetaMask
     // Toast de aguardando confirmação da blockchain
-    pendingToast = toast.info(t('transaction_sent_waiting_blockchain'), { // Traduzido
+    pendingToast = toast.info(t('transaction_sent_waiting_blockchain'), {
         timeout: false, closeButton: false, closeOnClick: false, draggable: false
     });
 
@@ -349,28 +402,28 @@ async function submitProject() {
       name: 'project-details',
       params: { id: newProjectId },
       state: {
-        toastMessage: t('project_created_success'), // Traduzido
+        toastMessage: t('project_created_success'),
         // Adicionando o ID ao estado para que a ProjectPage possa validar se o toast é para ela
         newlyCreatedProjectId: newProjectId
       }
     });
 
   } catch (error: any) {
-    console.error(`${t('error_creating_project_prefix')} ${error}`); // Traduzido
+    console.error(`${t('error_creating_project_prefix')} ${error}`);
 
     if (pendingToast) { // Certifica-se de fechar qualquer toast pendente em caso de erro
         toast.dismiss(pendingToast);
     }
 
     if (error.code === 'ACTION_REJECTED' || error.code === 4001) { // Erro do usuário rejeitando a transação
-      toast.error(t('project_creation_canceled_by_user')); // Traduzido
+      toast.error(t('project_creation_canceled_by_user'));
     } else {
       // Tenta extrair uma mensagem de erro mais útil do erro da transação
-      let errorMsg = t('generic_error_creating_project'); // Traduzido
+      let errorMsg = t('generic_error_creating_project');
       if (error.reason) { // Ex: "execution reverted: Goal must be greater than zero"
-          errorMsg = `${t('blockchain_error')} ${error.reason}`; // Traduzido
+          errorMsg = `${t('blockchain_error')} ${error.reason}`;
       } else if (error.data && error.data.message) { // Formato comum para erros de revert
-          errorMsg = `${t('transaction_error')} ${error.data.message}`; // Traduzido
+          errorMsg = `${t('transaction_error')} ${error.data.message}`;
       } else if (error.message) { // Mensagem genérica do erro
           errorMsg = `${t('general_error')} ${error.message.substring(0, 100)}...`; // Limita o tamanho para não poluir
       }
